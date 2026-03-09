@@ -1,0 +1,130 @@
+hotel:
+  name:
+    zh: Terrace Villa Foresta Asama
+    ja: テラスヴィラフォレスタ浅間
+    en: Terrace Villa Foresta Asama
+
+  tagline:
+    zh: 避暑胜地的极致奢享，森林深处的隐逸天堂
+    ja: 避暑地の極上の贅沢、森の奥に佇む隠れ家
+    en: Ultimate Luxury in a Mountain Retreat, a Hidden Paradise Deep in the Forest
+
+  subtitle:
+    zh: 在日本最具代表性的度假胜地轻井泽，开启极致奢华的假日时光。
+    ja: 日本を代表するリゾート地、軽井沢で極上の休暇をお過ごしください。
+    en: Begin your journey of ultimate luxury in Karuizawa, Japan's most prestigious resort destination.
+
+  introduction:
+    zh: |
+      下榻于此，您将体验到绝佳的私密性与尊贵感。这些独立别墅不仅提供了极致宽敞的居住空间，
+      更配备了俯瞰浅间山的私人景观露台。这并非仅仅是一家酒店，更是一处深植于自然中的"归家之所"。
+      您可以在森林的环抱中享受完全不被打扰的宁静，在开放式的客厅中感受自然光的流淌，
+      真正实现奢华与荒野的完美融合。
+    ja: |
+      ここに滞在することで、最高のプライバシーと高貴な体験をお楽しみいただけます。
+      独立したヴィラは極めて広々とした居住空間を提供し、浅間山を一望できるプライベートテラスを備えています。
+      これはホテルではなく、自然の中に深く根ざした「帰る場所」です。
+    en: |
+      Staying here, you will experience unparalleled privacy and prestige. These independent villas
+      offer extremely spacious living spaces and private terraces overlooking Mt. Asama.
+      This is not merely a hotel, but a "place to call home" deeply rooted in nature.
+
+  features:
+    - key: private
+      icon: lock
+      title:
+        zh: 极致私密
+        ja: 完全プライベート
+        en: Ultimate Privacy
+      description:
+        zh: 独立别墅，完全私密的奢华体验
+        ja: 独立ヴィラで完全なプライベート空間
+        en: Independent villa with complete privacy
+
+    - key: nature
+      icon: forest
+      title:
+        zh: 森林环抱
+        ja: 森に抱かれた
+        en: Forest Embrace
+      description:
+        zh: 坐落于轻井泽原始森林之中
+        ja: 軽井沢の原生林に囲まれた立地
+        en: Nestled in Karuizawa's primeval forest
+
+    - key: asama
+      icon: mountain
+      title:
+        zh: 浅间山景
+        ja: 浅間山の眺望
+        en: Mt. Asama View
+      description:
+        zh: 私人露台直面雄伟浅间山
+        ja: プライベートテラスから浅間山を一望
+        en: Private terrace facing magnificent Mt. Asama
+
+    - key: service
+      icon: star
+      title:
+        zh: 管家服务
+        ja: バトラーサービス
+        en: Butler Service
+      description:
+        zh: 全程专属私人管家贴心服务
+        ja: 専属バトラーによる手厚いサービス
+        en: Dedicated personal butler throughout your stay
+
+  stats:
+    - value: "4"
+      label:
+        zh: 独立别墅
+        ja: 独立ヴィラ
+        en: Private Villas
+
+    - value: "1,000m"
+      label:
+        zh: 海拔高度
+        ja: 標高
+        en: Elevation
+
+    - value: "24h"
+      label:
+        zh: 管家服务
+        ja: バトラー
+        en: Butler Service
+
+  contact:
+    address:
+      zh: 〒389-0111 长野县北佐久郡轻井泽町
+      ja: 〒389-0111 長野県北佐久郡軽井沢町
+      en: 〒389-0111 Karuizawa-machi, Kitasaku-gun, Nagano
+    email: info@foresta-asama.jp
+    phone: "+81-267-XX-XXXX"
+
+  gallery:
+    categories:
+      - key: exterior
+        label:
+          zh: 外观
+          ja: 外観
+          en: Exterior
+      - key: interior
+        label:
+          zh: 室内
+          ja: 室内
+          en: Interior
+      - key: terrace
+        label:
+          zh: 露台
+          ja: テラス
+          en: Terrace
+      - key: dining
+        label:
+          zh: 餐饮
+          ja: ダイニング
+          en: Dining
+      - key: nature
+        label:
+          zh: 自然
+          ja: 自然
+          en: Nature

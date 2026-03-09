@@ -1,0 +1,3 @@
+# Place placeholder images here for local development
+# Actual images should be in data/local-media/ (served by backend)
+# Or configure NEXT_PUBLIC_MEDIA_BASE_URL to point to backend

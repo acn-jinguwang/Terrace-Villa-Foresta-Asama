@@ -1,0 +1,194 @@
+karuizawa:
+  introduction:
+    zh: |
+      轻井泽作为日本最负盛名的名流别墅区，自明治时代起便是皇室与政商名流的夏季避暑胜地。
+      这里不仅拥有得天独厚的清凉气候，更是身份与品位的象征。
+    ja: |
+      軽井沢は日本で最も有名な名士の別荘地として、明治時代から皇室や政財界の名士の夏の避暑地として愛されてきました。
+    en: |
+      As Japan's most prestigious villa resort, Karuizawa has been the summer retreat for royalty
+      and elite society since the Meiji era.
+
+  stats:
+    elevation: "1,000m"
+    year_founded: "1867"
+    summer_temp: "~16°C"
+    historic_buildings: "100+"
+
+  transport:
+    - mode: shinkansen
+      icon: train
+      title:
+        zh: 新干线
+        ja: 新幹線
+        en: Shinkansen
+      description:
+        zh: 东京 → 轻井泽 约72分钟
+        ja: 東京 → 軽井沢 約72分
+        en: Tokyo → Karuizawa ~72 min
+    - mode: highway
+      icon: car
+      title:
+        zh: 高速公路
+        ja: 高速道路
+        en: Highway
+      description:
+        zh: 东京 → 轻井泽 约2.5小时
+        ja: 東京 → 軽井沢 約2.5時間
+        en: Tokyo → Karuizawa ~2.5 hours
+    - mode: helicopter
+      icon: helicopter
+      title:
+        zh: 直升机
+        ja: ヘリコプター
+        en: Helicopter
+      description:
+        zh: 定制包机服务可预约
+        ja: チャーター便予約可能
+        en: Charter service available
+
+spots:
+  - id: shiraito
+    category: nature
+    name:
+      zh: 白丝瀑布
+      ja: 白糸の滝
+      en: Shiraito Falls
+    description:
+      zh: 日本三大瀑布之一，如白丝般细腻流淌的美丽瀑布，四季各有不同魅力。
+      ja: 日本三大瀑布のひとつ、白糸のように繊細に流れる美しい滝で、四季それぞれに異なる魅力があります。
+      en: One of Japan's three great waterfalls, flowing delicately like white silk.
+    distance_minutes: 15
+    image: surroundings/shiraito.jpg
+    tags:
+      - zh: 自然景观
+        ja: 自然景観
+        en: Natural Scenery
+      - zh: 徒步
+        ja: ハイキング
+        en: Hiking
+
+  - id: asama
+    category: nature
+    name:
+      zh: 浅间山
+      ja: 浅間山
+      en: Mt. Asama
+    description:
+      zh: 日本最活跃的火山之一，雄伟的姿态与神秘的云雾构成绝美的自然景观。
+      ja: 日本で最も活発な火山のひとつで、雄大な姿と神秘的な霧が絶美な自然景観を作り出しています。
+      en: One of Japan's most active volcanoes, its majestic form creates breathtaking scenery.
+    distance_minutes: 5
+    image: surroundings/asama.jpg
+    tags:
+      - zh: 火山景观
+        ja: 火山景観
+        en: Volcanic Scenery
+      - zh: 摄影
+        ja: 写真
+        en: Photography
+
+  - id: kumoba
+    category: nature
+    name:
+      zh: 云场池
+      ja: 雲場池
+      en: Kumoba Pond
+    description:
+      zh: 被誉为"轻井泽之眼"，秋季红叶倒映水中，如诗如画。
+      ja: 「軽井沢の瞳」と称される池は、秋の紅葉が水面に映り、詩のような美しさ。
+      en: Known as the "Eye of Karuizawa", autumn foliage reflected on the water creates poetic beauty.
+    distance_minutes: 8
+    image: surroundings/kumoba.jpg
+    tags:
+      - zh: 季节景色
+        ja: 季節の景色
+        en: Seasonal Scenery
+
+  - id: stone-church
+    category: culture
+    name:
+      zh: 石之教堂
+      ja: 石の教会
+      en: Stone Church
+    description:
+      zh: 建筑师肯德里克·班斯的杰作，以自然石材和玻璃构成的现代主义教堂，与自然融为一体。
+      ja: 建築家ケンドリック・バンスの傑作で、天然石とガラスで構成されたモダニズムの教会。
+      en: A masterpiece by architect Kendrick Bangs, a modernist church of natural stone and glass.
+    distance_minutes: 10
+    image: surroundings/stone-church.jpg
+    tags:
+      - zh: 建筑艺术
+        ja: 建築芸術
+        en: Architecture
+
+  - id: sezon-museum
+    category: culture
+    name:
+      zh: 轻井泽现代美术馆
+      ja: 軽井沢現代美術館
+      en: Karuizawa Museum of Modern Art
+    description:
+      zh: 收藏包括毕加索、达利等世界名家作品，森林包围中的艺术殿堂。
+      ja: ピカソやダリなどの世界的巨匠の作品を収蔵する、森に囲まれた芸術の殿堂。
+      en: Housing works by world masters including Picasso and Dali, an art temple in the forest.
+    distance_minutes: 12
+    image: surroundings/museum.jpg
+    tags:
+      - zh: 艺术
+        ja: 芸術
+        en: Art
+
+  - id: ginza
+    category: shopping
+    name:
+      zh: 旧银座商店街
+      ja: 旧軽銀座商店街
+      en: Old Ginza Shopping Street
+    description:
+      zh: 拥有百年历史的购物街，汇集了轻井泽知名品牌、工艺品和特色美食。
+      ja: 百年の歴史を誇るショッピングストリートで、軽井沢の有名ブランドや特色グルメが集まる。
+      en: A shopping street with centennial history, gathering Karuizawa's famous brands and specialty foods.
+    distance_minutes: 10
+    image: surroundings/ginza.jpg
+    tags:
+      - zh: 购物
+        ja: ショッピング
+        en: Shopping
+
+  - id: hoshino-onsen
+    category: activity
+    name:
+      zh: 星野温泉蜻蜓之汤
+      ja: 星野温泉 とんぼの湯
+      en: Hoshino Onsen Tonbo-no-yu
+    description:
+      zh: 轻井泽最负盛名的温泉设施，泡汤同时欣赏森林美景，彻底放松身心。
+      ja: 軽井沢で最も有名な温泉施設で、森の美景を眺めながら心身をリラックスできます。
+      en: Karuizawa's most famous onsen facility, relax completely while enjoying forest views.
+    distance_minutes: 5
+    image: surroundings/onsen.jpg
+    tags:
+      - zh: 温泉
+        ja: 温泉
+        en: Onsen
+
+  - id: harunire
+    category: shopping
+    name:
+      zh: 榆树街小镇
+      ja: ハルニレテラス
+      en: Harunire Terrace
+    description:
+      zh: 依偎在古老榆树群中的精品商业空间，包含餐厅、咖啡馆和精选商店。
+      ja: 古いハルニレの木立に囲まれたブティック商業空間で、レストランやカフェが集まる憩いの場。
+      en: A boutique commercial space nestled among old elm trees, featuring restaurants and cafes.
+    distance_minutes: 5
+    image: surroundings/harunire.jpg
+    tags:
+      - zh: 购物
+        ja: ショッピング
+        en: Shopping
+      - zh: 餐饮
+        ja: グルメ
+        en: Dining

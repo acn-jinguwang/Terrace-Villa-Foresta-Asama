@@ -1,0 +1,193 @@
+plans:
+  - id: golf
+    image: plans/golf.jpg
+    duration: 7
+    price: "¥60,000"
+    currency: JPY
+    tag:
+      zh: 最受欢迎
+      ja: 最人気
+      en: Most Popular
+    title:
+      zh: 高尔夫精英之旅
+      ja: ゴルフエリートの旅
+      en: Golf Elite Journey
+    tagline:
+      zh: 征服日本顶级球场，体验皇室级奢华
+      ja: 日本最高峰コースを制覇し、ロイヤルクラスの贅沢を体験
+      en: Conquer Japan's finest courses, experience royal-class luxury
+    description:
+      zh: 此行不仅是一场对顶级绿茵的征服，更是一次深入日本皇室避暑地核心的灵魂洗礼。
+      ja: この旅は単なるトップクラスのグリーンへの挑戦ではなく、日本の皇室避暑地の中核に深く入り込む魂の洗礼でもあります。
+      en: This journey is not just a conquest of top-tier greens, but a spiritual immersion into the heart of Japan's royal summer retreat.
+    includes:
+      - zh: 6晚 Terrace Villa Foresta Asama 独立别墅住宿
+        ja: 6泊 Terrace Villa Foresta Asama 独立ヴィラ宿泊
+        en: 6 nights at Terrace Villa Foresta Asama private villa
+      - zh: 5场顶级高尔夫球场绿地费
+        ja: 5ラウンドのトップゴルフコース利用
+        en: 5 rounds at top golf courses
+      - zh: 全程专属私人管家服务
+        ja: 全行程専属プライベートバトラーサービス
+        en: Dedicated private butler throughout
+      - zh: 每日别墅早餐及指定餐厅晚宴
+        ja: 毎日ヴィラ朝食と指定レストランディナー
+        en: Daily villa breakfast and designated dinners
+      - zh: 全程私人豪华专车
+        ja: 全行程プライベート高級車
+        en: Private luxury transportation throughout
+    highlights:
+      - zh: 5大顶级球场体验
+        ja: 5大トップコース体験
+        en: 5 Top Golf Courses
+      - zh: 别墅私人管家
+        ja: ヴィラ専属バトラー
+        en: Private Villa Butler
+      - zh: 米其林餐厅晚宴
+        ja: ミシュランレストランディナー
+        en: Michelin Dinner
+    itinerary:
+      - day: 1
+        title:
+          zh: 抵达轻井泽：初遇浅间之美
+          ja: 軽井沢到着：浅間山との初めての出会い
+          en: Arrival in Karuizawa - First Encounter with Mt. Asama
+        activities:
+          - zh: 抵达轻井泽车站
+            ja: 軽井沢駅到着
+            en: Arrive at Karuizawa Station
+          - zh: 私人专车接送至别墅办理入住
+            ja: プライベート車でヴィラにチェックイン
+            en: Private transfer to villa check-in
+          - zh: 轻井泽浅间高尔夫球场午后开球
+            ja: 軽井沢浅間ゴルフ場午後プレー
+            en: Afternoon round at Karuizawa Asama Golf Course
+        meals:
+          morning:
+            zh: 不含
+            ja: 不含
+            en: Not included
+          lunch:
+            zh: 球场精致轻食
+            ja: コース上品なライトミール
+            en: Course refined light meal
+          dinner:
+            zh: 别墅内私人主厨和牛晚宴
+            ja: ヴィラ内プライベートシェフ和牛ディナー
+            en: Private chef wagyu dinner in villa
+    budget:
+      - category:
+          zh: 奢华下榻
+          ja: 贅沢宿泊
+          en: Luxury Accommodation
+        amount: "¥25,000"
+        note:
+          zh: Terrace Villa Foresta Asama 6晚独立别墅住宿（双人分享），含私人管家服务
+          ja: Terrace Villa Foresta Asama 6泊独立ヴィラ（2名様）、専属バトラー込み
+          en: 6 nights private villa (shared double), including butler service
+      - category:
+          zh: 顶级果岭费
+          ja: トップグリーンフィー
+          en: Top Green Fees
+        amount: "¥15,000"
+        note:
+          zh: 包含5场顶级球场的果岭费、球车费
+          ja: 5ラウンド分のグリーンフィー、カートフィー含む
+          en: Includes 5 rounds of green fees, cart fees
+      - category:
+          zh: 饕餮餐饮
+          ja: グルメ飲食
+          en: Gourmet Dining
+        amount: "¥12,000"
+        note:
+          zh: 每日别墅内高端早餐、球场精致午餐及晚宴
+          ja: 毎日のヴィラ高級朝食、コース上品ランチ、晩餐
+          en: Daily villa premium breakfast, course lunch, and exclusive dinners
+      - category:
+          zh: 专车与服务
+          ja: 専用車とサービス
+          en: Private Transfer & Services
+        amount: "¥8,000"
+        note:
+          zh: 全行程私人专车、专业领队服务及所有景点门票
+          ja: 全行程プライベート送迎、ガイドサービス、観光地入場料含む
+          en: Full itinerary private transfer, professional guide, all entrance fees
+
+  - id: nature
+    image: plans/nature.jpg
+    duration: 4
+    price: "¥35,000"
+    tag: null
+    title:
+      zh: 轻井泽自然探索
+      ja: 軽井沢ネイチャーツアー
+      en: Karuizawa Nature Tour
+    tagline:
+      zh: 深入自然，感受森林与火山的壮美
+      ja: 自然の奥深く、森と火山の壮大さを感じる
+      en: Venture deep into nature, feel the grandeur of forest and volcano
+    description:
+      zh: 深入轻井泽原始森林，感受大自然的恢弘与宁静，开启心灵的归宿之旅。
+      ja: 軽井沢の原生林に分け入り、大自然の壮大さと静寂を感じる心の故郷への旅。
+      en: Venture deep into Karuizawa's primeval forest, feel the grandeur and tranquility of nature.
+    includes:
+      - zh: 3晚独立别墅住宿
+        ja: 3泊独立ヴィラ宿泊
+        en: 3 nights private villa accommodation
+      - zh: 自然向导全程陪同
+        ja: ネイチャーガイド同行
+        en: Nature guide throughout
+      - zh: 专属私人管家服务
+        ja: 専属プライベートバトラー
+        en: Dedicated private butler
+    highlights:
+      - zh: 白丝瀑布徒步
+        ja: 白糸の滝ハイキング
+        en: Shiraito Falls Hike
+      - zh: 浅间山观望
+        ja: 浅間山ビュー
+        en: Mt. Asama View
+      - zh: 星野温泉体验
+        ja: 星野温泉体験
+        en: Hoshino Onsen
+
+  - id: luxury
+    image: plans/luxury.jpg
+    duration: 5
+    price: "¥45,000"
+    tag:
+      zh: 新品
+      ja: 新登場
+      en: New
+    title:
+      zh: 奢华蜜月之旅
+      ja: ラグジュアリーハネムーン
+      en: Luxury Honeymoon
+    tagline:
+      zh: 专为恋人打造的极致浪漫体验
+      ja: カップルのために特別に作られた至極のロマンチック体験
+      en: Ultimate romantic experience crafted exclusively for couples
+    description:
+      zh: 专为恋人打造，沉浸在轻井泽的浪漫氛围中，享受两人世界的极致私密体验。
+      ja: カップルのために特別に設計された軽井沢のロマンチックな体験。
+      en: Specially crafted for couples, immerse yourselves in the romantic atmosphere of Karuizawa.
+    includes:
+      - zh: 4晚独立别墅蜜月套房
+        ja: 4泊独立ヴィラハネムーンスイート
+        en: 4 nights independent villa honeymoon suite
+      - zh: 私人烛光晚宴
+        ja: プライベートキャンドルディナー
+        en: Private candlelit dinner
+      - zh: 双人spa体验
+        ja: カップルスパ体験
+        en: Couples spa experience
+    highlights:
+      - zh: 私人烛光晚宴
+        ja: プライベートキャンドルディナー
+        en: Private Candlelit Dinner
+      - zh: 露台日出观赏
+        ja: テラスからの日の出鑑賞
+        en: Terrace Sunrise Viewing
+      - zh: 双人spa体验
+        ja: カップルスパ体験
+        en: Couples Spa

@@ -1,0 +1,8 @@
+# Place your local media files here during development
+# Directory structure:
+# local-media/
+#   hero/          - Hero slideshow images (hero-1.jpg, hero-2.jpg, ...)
+#   gallery/       - Photo gallery images (ext-1.jpg, int-1.jpg, ...)
+#   plans/         - Travel plan images (golf.jpg, nature.jpg, ...)
+#   surroundings/  - Surroundings images (shiraito.jpg, asama.jpg, ...)
+#   videos/        - Video files (villa-intro.mp4)
