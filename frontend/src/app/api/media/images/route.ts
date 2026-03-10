@@ -1,29 +1,31 @@
 import { NextResponse } from 'next/server';
-import { readFile } from 'fs/promises';
-import path from 'path';
-
-const MANIFEST_PATH = path.join(process.cwd(), 'data', 'media-manifest.json');
+import { getDb } from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
 
-    let entries: { type: string; category: string }[] = [];
-    try {
-      const raw = await readFile(MANIFEST_PATH, 'utf-8');
-      entries = JSON.parse(raw);
-    } catch {
-      entries = [];
-    }
+    const db  = getDb();
+    const sql = category
+      ? 'SELECT * FROM media WHERE type = ? AND category = ? ORDER BY sort_order ASC, created_at DESC'
+      : 'SELECT * FROM media WHERE type = ? ORDER BY sort_order ASC, created_at DESC';
+    const params = category ? ['image', category] : ['image'];
+    const [rows] = await db.query(sql, params) as any[][];
 
-    let filtered = entries.filter((e) => e.type === 'image');
-    if (category) {
-      filtered = filtered.filter((e) => e.category === category);
-    }
-
-    return NextResponse.json(filtered);
+    return NextResponse.json(rows.map((r: any) => ({
+      id:         r.id,
+      name:       r.name,
+      url:        r.url,
+      type:       r.type,
+      category:   r.category,
+      size:       r.size,
+      uploadDate: r.upload_date,
+      isHero:     r.is_hero === 1,
+      s3Key:      r.s3_key,
+    })));
   } catch (err) {
-    return NextResponse.json([], { status: 200 });
+    console.error('[media/images]', err);
+    return NextResponse.json([]);
   }
 }

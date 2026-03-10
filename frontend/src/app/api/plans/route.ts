@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { readFile, writeFile } from 'fs/promises';
-import path from 'path';
-
-const PLANS_PATH = path.join(process.cwd(), 'data', 'plans.json');
+import { getDb } from '@/lib/db';
 
 export interface PlanEntry {
   id: string;
@@ -17,74 +14,92 @@ export interface PlanEntry {
   createdAt: string;
 }
 
-async function readPlans(): Promise<PlanEntry[]> {
-  try {
-    const raw = await readFile(PLANS_PATH, 'utf-8');
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+export function rowToPlan(r: any): PlanEntry {
+  const j = (v: any) => (typeof v === 'string' ? JSON.parse(v) : v) ?? [];
+  return {
+    id:           r.id,
+    titleZh:      r.title_zh,  titleJa:     r.title_ja,  titleEn:     r.title_en,
+    descZh:       r.desc_zh,   descJa:      r.desc_ja,   descEn:      r.desc_en,
+    duration:     r.duration,
+    price:        r.price,
+    tagZh:        r.tag_zh,    tagJa:       r.tag_ja,    tagEn:       r.tag_en,
+    highlightsZh: j(r.highlights_zh),
+    highlightsJa: j(r.highlights_ja),
+    highlightsEn: j(r.highlights_en),
+    coverImage:   r.cover_image,
+    visible:      r.visible === 1,
+    createdAt:    r.created_at,
+  };
 }
 
-async function savePlans(plans: PlanEntry[]) {
-  await writeFile(PLANS_PATH, JSON.stringify(plans, null, 2), 'utf-8');
-}
-
-// GET /api/plans — returns all plans (admin) or only visible (public via ?public=1)
+// GET /api/plans
 export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const plans = await readPlans();
-  if (url.searchParams.get('public') === '1') {
-    return NextResponse.json(plans.filter((p) => p.visible));
+  try {
+    const isPublic = new URL(request.url).searchParams.get('public') === '1';
+    const db = getDb();
+    const sql = isPublic
+      ? 'SELECT * FROM plans WHERE visible = 1 ORDER BY sort_order ASC, created_at ASC'
+      : 'SELECT * FROM plans ORDER BY sort_order ASC, created_at ASC';
+    const [rows] = await db.query(sql) as any[][];
+    return NextResponse.json(rows.map(rowToPlan));
+  } catch (err) {
+    console.error('[plans GET]', err);
+    return NextResponse.json([]);
   }
-  return NextResponse.json(plans);
 }
 
-// PATCH /api/plans — reorder plans (body: { order: string[] })
+// PATCH /api/plans — reorder
 export async function PATCH(request: Request) {
   try {
     const { order }: { order: string[] } = await request.json();
     if (!Array.isArray(order)) {
       return NextResponse.json({ error: 'order must be an array of IDs' }, { status: 400 });
     }
-    const plans = await readPlans();
-    const map = new Map(plans.map((p) => [p.id, p]));
-    const reordered = order.map((id) => map.get(id)).filter(Boolean) as PlanEntry[];
-    // Append any plans not in order list at the end
-    plans.forEach((p) => { if (!order.includes(p.id)) reordered.push(p); });
-    await savePlans(reordered);
-    return NextResponse.json(reordered);
+    const db = getDb();
+    await Promise.all(order.map((id, idx) =>
+      db.query('UPDATE plans SET sort_order = ? WHERE id = ?', [idx, id]),
+    ));
+    const [rows] = await db.query('SELECT * FROM plans ORDER BY sort_order ASC') as any[][];
+    return NextResponse.json(rows.map(rowToPlan));
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
 
-// POST /api/plans — create new plan
+// POST /api/plans — create
 export async function POST(request: Request) {
   try {
     const body: Partial<PlanEntry> = await request.json();
     if (!body.id || !body.titleZh) {
       return NextResponse.json({ error: 'id and titleZh are required' }, { status: 400 });
     }
-    const plans = await readPlans();
-    if (plans.some((p) => p.id === body.id)) {
-      return NextResponse.json({ error: 'Plan ID already exists' }, { status: 409 });
-    }
-    const plan: PlanEntry = {
-      id: body.id,
-      titleZh: body.titleZh ?? '', titleJa: body.titleJa ?? '', titleEn: body.titleEn ?? '',
-      descZh:  body.descZh  ?? '', descJa:  body.descJa  ?? '', descEn:  body.descEn  ?? '',
-      duration: body.duration ?? 1,
-      price:    body.price   ?? '',
-      tagZh: body.tagZh ?? '', tagJa: body.tagJa ?? '', tagEn: body.tagEn ?? '',
-      highlightsZh: body.highlightsZh ?? [], highlightsJa: body.highlightsJa ?? [], highlightsEn: body.highlightsEn ?? [],
-      coverImage: body.coverImage ?? '',
-      visible:   body.visible ?? true,
-      createdAt: new Date().toISOString(),
-    };
-    plans.push(plan);
-    await savePlans(plans);
-    return NextResponse.json(plan, { status: 201 });
+    const db = getDb();
+    const [existing] = await db.query('SELECT id FROM plans WHERE id = ?', [body.id]) as any[][];
+    if (existing.length) return NextResponse.json({ error: 'Plan ID already exists' }, { status: 409 });
+
+    await db.query(
+      `INSERT INTO plans
+       (id, title_zh, title_ja, title_en, desc_zh, desc_ja, desc_en,
+        duration, price, tag_zh, tag_ja, tag_en,
+        highlights_zh, highlights_ja, highlights_en,
+        cover_image, visible, sort_order)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        body.id,
+        body.titleZh ?? '', body.titleJa ?? '', body.titleEn ?? '',
+        body.descZh  ?? '', body.descJa  ?? '', body.descEn  ?? '',
+        body.duration ?? 1,  body.price ?? '',
+        body.tagZh ?? '', body.tagJa ?? '', body.tagEn ?? '',
+        JSON.stringify(body.highlightsZh ?? []),
+        JSON.stringify(body.highlightsJa ?? []),
+        JSON.stringify(body.highlightsEn ?? []),
+        body.coverImage ?? '',
+        body.visible !== false ? 1 : 0,
+        0,
+      ],
+    );
+    const [rows] = await db.query('SELECT * FROM plans WHERE id = ?', [body.id]) as any[][];
+    return NextResponse.json(rowToPlan(rows[0]), { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
