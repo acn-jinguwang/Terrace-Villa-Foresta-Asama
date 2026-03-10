@@ -26,12 +26,14 @@ export async function POST(request: Request) {
     }
 
     const token = await createSessionToken(user.id, user.username);
+    const proto = request.headers.get('x-forwarded-proto') ?? '';
+    const isHttps = proto === 'https' || request.url.startsWith('https://');
     const response = NextResponse.json({ ok: true, username: user.username });
     response.cookies.set({
       name:     COOKIE_NAME,
       value:    token,
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
+      secure:   isHttps,
       sameSite: 'lax',
       path:     '/',
       maxAge:   60 * 60 * 24,
