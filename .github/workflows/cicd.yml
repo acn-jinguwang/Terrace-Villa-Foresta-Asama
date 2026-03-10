@@ -1,0 +1,207 @@
+name: CI/CD — Foresta Asama
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # OIDC token
+  contents: read
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ACCOUNT_ID: "508985564091"
+  ECR_FRONTEND: 508985564091.dkr.ecr.ap-northeast-1.amazonaws.com/foresta-asama-frontend
+  ECR_BACKEND: 508985564091.dkr.ecr.ap-northeast-1.amazonaws.com/foresta-asama-backend
+  ECS_CLUSTER: foresta-asama-cluster
+  ECS_SERVICE_FRONTEND: foresta-asama-frontend
+  ECS_SERVICE_BACKEND: foresta-asama-backend
+  CODEBUILD_FRONTEND: foresta-asama-frontend-build
+  CODEBUILD_BACKEND: foresta-asama-backend-build
+  IAM_ROLE: arn:aws:iam::508985564091:role/foresta-asama-github-actions-role
+
+jobs:
+  # ----------------------------------------------------------------
+  # Detect which services changed
+  # ----------------------------------------------------------------
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Filter changed paths
+        id: filter
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -qE '^frontend/'; then
+            echo "frontend=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend=false" >> $GITHUB_OUTPUT
+          fi
+
+          if echo "$CHANGED" | grep -qE '^backend/'; then
+            echo "backend=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ----------------------------------------------------------------
+  # Build & push frontend via CodeBuild
+  # ----------------------------------------------------------------
+  build-frontend:
+    name: Build Frontend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Start CodeBuild — frontend
+        id: start
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name "$CODEBUILD_FRONTEND" \
+            --environment-variables-override \
+              "name=IMAGE_TAG,value=${IMAGE_TAG},type=PLAINTEXT" \
+            --query 'build.id' --output text)
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Started build: $BUILD_ID"
+
+      - name: Wait for CodeBuild — frontend
+        run: |
+          BUILD_ID="${{ steps.start.outputs.build_id }}"
+          echo "Waiting for build: $BUILD_ID"
+          while true; do
+            STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" \
+              --query 'builds[0].buildStatus' --output text)
+            echo "Status: $STATUS"
+            case $STATUS in
+              SUCCEEDED) echo "Build succeeded"; break ;;
+              FAILED|FAULT|TIMED_OUT|STOPPED)
+                echo "Build failed with status: $STATUS"
+                exit 1 ;;
+              *) sleep 15 ;;
+            esac
+          done
+
+  # ----------------------------------------------------------------
+  # Build & push backend via CodeBuild
+  # ----------------------------------------------------------------
+  build-backend:
+    name: Build Backend
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Start CodeBuild — backend
+        id: start
+        run: |
+          IMAGE_TAG="${{ github.sha }}"
+          BUILD_ID=$(aws codebuild start-build \
+            --project-name "$CODEBUILD_BACKEND" \
+            --environment-variables-override \
+              "name=IMAGE_TAG,value=${IMAGE_TAG},type=PLAINTEXT" \
+            --query 'build.id' --output text)
+          echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "Started build: $BUILD_ID"
+
+      - name: Wait for CodeBuild — backend
+        run: |
+          BUILD_ID="${{ steps.start.outputs.build_id }}"
+          echo "Waiting for build: $BUILD_ID"
+          while true; do
+            STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" \
+              --query 'builds[0].buildStatus' --output text)
+            echo "Status: $STATUS"
+            case $STATUS in
+              SUCCEEDED) echo "Build succeeded"; break ;;
+              FAILED|FAULT|TIMED_OUT|STOPPED)
+                echo "Build failed with status: $STATUS"
+                exit 1 ;;
+              *) sleep 15 ;;
+            esac
+          done
+
+  # ----------------------------------------------------------------
+  # Deploy to ECS (rolling update)
+  # ----------------------------------------------------------------
+  deploy:
+    name: Deploy to ECS
+    needs: [detect-changes, build-frontend, build-backend]
+    if: always() && !failure() && !cancelled()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.IAM_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy frontend service
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE_FRONTEND" \
+            --force-new-deployment \
+            --query 'service.serviceName' --output text
+          echo "Frontend deployment triggered"
+
+      - name: Deploy backend service
+        if: needs.detect-changes.outputs.backend == 'true'
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE_BACKEND" \
+            --force-new-deployment \
+            --query 'service.serviceName' --output text
+          echo "Backend deployment triggered"
+
+      - name: Wait for frontend service stable
+        if: needs.detect-changes.outputs.frontend == 'true'
+        run: |
+          echo "Waiting for frontend ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE_FRONTEND"
+          echo "Frontend service is stable"
+
+      - name: Wait for backend service stable
+        if: needs.detect-changes.outputs.backend == 'true'
+        run: |
+          echo "Waiting for backend ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE_BACKEND"
+          echo "Backend service is stable"
+
+      - name: Deployment summary
+        run: |
+          echo "=== Deployment Complete ==="
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Frontend deployed: ${{ needs.detect-changes.outputs.frontend }}"
+          echo "Backend deployed:  ${{ needs.detect-changes.outputs.backend }}"
