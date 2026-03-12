@@ -19,3 +19,62 @@ export function getDb(): mysql.Pool {
   }
   return pool;
 }
+
+export async function runMigration(): Promise<void> {
+  const db = getDb();
+  const tables = [
+    `CREATE TABLE IF NOT EXISTS media (
+      id          VARCHAR(36)   PRIMARY KEY,
+      name        VARCHAR(255)  NOT NULL DEFAULT '',
+      url         VARCHAR(1024) NOT NULL DEFAULT '',
+      s3_key      VARCHAR(1024),
+      type        VARCHAR(50)   DEFAULT 'image',
+      category    VARCHAR(100)  DEFAULT '',
+      size        BIGINT        DEFAULT 0,
+      upload_date DATETIME      DEFAULT CURRENT_TIMESTAMP,
+      is_hero     TINYINT(1)    DEFAULT 0,
+      sort_order  INT           DEFAULT 0,
+      created_at  DATETIME      DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS page_layouts (
+      section_key VARCHAR(200) PRIMARY KEY,
+      image_urls  JSON         NOT NULL,
+      updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS plans (
+      id              VARCHAR(100) PRIMARY KEY,
+      title_zh        VARCHAR(500) DEFAULT '',
+      title_ja        VARCHAR(500) DEFAULT '',
+      title_en        VARCHAR(500) DEFAULT '',
+      desc_zh         TEXT,
+      desc_ja         TEXT,
+      desc_en         TEXT,
+      duration        INT          DEFAULT 1,
+      price           VARCHAR(100) DEFAULT '',
+      tag_zh          VARCHAR(500) DEFAULT '',
+      tag_ja          VARCHAR(500) DEFAULT '',
+      tag_en          VARCHAR(500) DEFAULT '',
+      highlights_zh   JSON,
+      highlights_ja   JSON,
+      highlights_en   JSON,
+      cover_image     VARCHAR(1024) DEFAULT '',
+      visible         TINYINT(1)   DEFAULT 1,
+      sort_order      INT          DEFAULT 0,
+      created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS users (
+      id            INT AUTO_INCREMENT PRIMARY KEY,
+      username      VARCHAR(100) UNIQUE NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  ];
+
+  for (const sql of tables) {
+    await db.query(sql);
+  }
+  console.log('[db] migration complete');
+}
