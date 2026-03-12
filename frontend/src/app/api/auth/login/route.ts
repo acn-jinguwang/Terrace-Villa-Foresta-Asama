@@ -2,13 +2,39 @@ import { NextResponse } from 'next/server';
 import { createSessionToken, hashPassword, COOKIE_NAME } from '@/lib/auth';
 import { getDb } from '@/lib/db';
 
-export async function POST(request: Request) {
-  try {
-    const { username, password } = await request.json();
-    if (!username || !password) {
-      return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
-    }
+function setCookie(response: NextResponse, token: string, isHttps: boolean) {
+  response.cookies.set({
+    name:     COOKIE_NAME,
+    value:    token,
+    httpOnly: true,
+    secure:   isHttps,
+    sameSite: 'lax',
+    path:     '/',
+    maxAge:   60 * 60 * 24,
+  });
+}
 
+export async function POST(request: Request) {
+  const { username, password } = await request.json().catch(() => ({}));
+  if (!username || !password) {
+    return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
+  }
+
+  const proto   = request.headers.get('x-forwarded-proto') ?? '';
+  const isHttps = proto === 'https' || request.url.startsWith('https://');
+
+  // ── 1. Environment variable fallback (always checked first) ──────────────
+  const envUser = process.env.ADMIN_USER;
+  const envPass = process.env.ADMIN_PASS;
+  if (envUser && envPass && username === envUser && password === envPass) {
+    const token    = await createSessionToken('env-admin', username);
+    const response = NextResponse.json({ ok: true, username });
+    setCookie(response, token, isHttps);
+    return response;
+  }
+
+  // ── 2. Database authentication ────────────────────────────────────────────
+  try {
     const db = getDb();
     const [rows] = await db.query(
       'SELECT id, username, password_hash, role FROM users WHERE username = ? LIMIT 1',
@@ -25,22 +51,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const token = await createSessionToken(user.id, user.username);
-    const proto = request.headers.get('x-forwarded-proto') ?? '';
-    const isHttps = proto === 'https' || request.url.startsWith('https://');
+    const token    = await createSessionToken(user.id, user.username);
     const response = NextResponse.json({ ok: true, username: user.username });
-    response.cookies.set({
-      name:     COOKIE_NAME,
-      value:    token,
-      httpOnly: true,
-      secure:   isHttps,
-      sameSite: 'lax',
-      path:     '/',
-      maxAge:   60 * 60 * 24,
-    });
+    setCookie(response, token, isHttps);
     return response;
   } catch (err) {
-    console.error('[login]', err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error('[login] DB error:', err);
+    return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
   }
 }
