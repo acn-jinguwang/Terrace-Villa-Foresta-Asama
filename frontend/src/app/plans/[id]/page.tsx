@@ -282,16 +282,15 @@ export default function PlanDetailPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [layoutRes, allImgRes] = await Promise.all([
-          fetch('/api/layouts'),
-          fetch('/api/media/images'),
-        ]);
+        const layoutRes = await fetch('/api/layouts');
         const layout: Record<string, string[]> = layoutRes.ok ? await layoutRes.json() : {};
-        const allImgs: MediaItem[] = allImgRes.ok ? await allImgRes.json() : [];
         const galleryUrls = layout[`plan.${plan.id}.gallery`] ?? [];
-        const photos = galleryUrls
-          .map((url) => allImgs.find((img) => img.url === url))
-          .filter(Boolean) as MediaItem[];
+        const photos: MediaItem[] = galleryUrls.map((url, i) => ({
+          id:       String(i),
+          url,
+          name:     url.split('/').pop() ?? '',
+          category: '',
+        }));
         setSpotPhotos(photos);
       } catch { /* silently fail */ }
     };
