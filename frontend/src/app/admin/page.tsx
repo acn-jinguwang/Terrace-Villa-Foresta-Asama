@@ -94,6 +94,7 @@ export default function AdminPage() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [editingPlan, setEditingPlan]   = useState<PlanEntry | null>(null);
   const [planForm, setPlanForm]         = useState<Omit<PlanEntry, 'createdAt'>>(BLANK_PLAN);
+  const [showImagePicker, setShowImagePicker] = useState(false);
   const [planSaving, setPlanSaving]     = useState(false);
 
   // ── Layout state ──
@@ -727,6 +728,7 @@ export default function AdminPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="text-left p-4 text-gold text-[10px] font-display uppercase tracking-widest w-16">Order</th>
+                    <th className="text-left p-4 text-gold text-[10px] font-display uppercase tracking-widest hidden sm:table-cell">Cover</th>
                     <th className="text-left p-4 text-gold text-[10px] font-display uppercase tracking-widest">Title</th>
                     <th className="text-left p-4 text-gold text-[10px] font-display uppercase tracking-widest hidden md:table-cell">Duration</th>
                     <th className="text-left p-4 text-gold text-[10px] font-display uppercase tracking-widest hidden md:table-cell">Price</th>
@@ -749,6 +751,15 @@ export default function AdminPage() {
                             className="w-6 h-5 flex items-center justify-center text-white/30 hover:text-gold disabled:opacity-20 disabled:cursor-not-allowed transition-colors text-xs">▼</button>
                         </div>
                       </td>
+                      <td className="p-4 hidden sm:table-cell">
+                        <div className="relative w-12 h-9 overflow-hidden border border-white/10 bg-white/5">
+                          {plan.coverImage
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={plan.coverImage} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center"><span className="text-white/20 text-[8px]">—</span></div>
+                          }
+                        </div>
+                      </td>
                       <td className="p-4">
                         <div className="font-serif text-white font-bold">{plan.titleZh}</div>
                         <div className="text-white/30 text-[10px] font-display uppercase tracking-widest mt-0.5">{plan.titleEn}</div>
@@ -763,6 +774,8 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => { setActiveTab('layout'); setLayoutPage(`plan-${plan.id}`); }}
+                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/30 hover:border-gold/30 hover:text-gold/70 transition-all">Gallery</button>
                           <button onClick={() => openEditPlan(plan)}
                             className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold transition-all">Edit</button>
                           <button onClick={() => handleDeletePlan(plan.id)}
@@ -861,6 +874,33 @@ export default function AdminPage() {
                         </div>
                       ))}
                     </div>
+                    {/* Cover Image Picker */}
+                    <div>
+                      <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">Cover Image</label>
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-24 h-16 overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
+                          {planForm.coverImage
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={planForm.coverImage} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center">
+                                <span className="text-white/20 text-[8px] font-display uppercase tracking-widest">No image</span>
+                              </div>
+                          }
+                        </div>
+                        <div className="flex flex-col gap-1.5">
+                          <button type="button" onClick={() => setShowImagePicker(true)}
+                            className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
+                            {planForm.coverImage ? '変更' : '選択'}
+                          </button>
+                          {planForm.coverImage && (
+                            <button type="button" onClick={() => setPlanForm((f) => ({ ...f, coverImage: '' }))}
+                              className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-red-500/20 text-red-400/50 hover:border-red-400/40 hover:text-red-400 transition-all">
+                              削除
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                     <div className="flex items-center gap-3">
                       <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">Visible on website</label>
                       <button onClick={() => setPlanForm((f) => ({ ...f, visible: !f.visible }))}
@@ -870,13 +910,47 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-white/10">
-                    <button onClick={() => setShowPlanForm(false)}
+                    <button onClick={() => { setShowPlanForm(false); setShowImagePicker(false); }}
                       className="px-6 py-2 border border-white/10 text-white/40 hover:text-white font-display text-xs uppercase tracking-widest transition-all">Cancel</button>
                     <button onClick={handleSavePlan} disabled={planSaving}
                       className="px-8 py-2 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
                       {planSaving ? 'Saving...' : editingPlan ? 'Save Changes' : 'Create Plan'}
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Image Picker Modal */}
+            {showImagePicker && (
+              <div className="fixed inset-0 bg-black/90 z-[300] flex items-start justify-center overflow-y-auto py-6 px-4">
+                <div className="w-full max-w-3xl bg-[#0a0a0a] border border-white/10 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display text-gold text-sm uppercase tracking-widest">Cover Image を選択</h3>
+                    <button onClick={() => setShowImagePicker(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
+                  </div>
+                  {imageFiles.length === 0
+                    ? <div className="text-white/20 text-sm font-kaiti italic text-center py-12">画像がありません。先に Images タブからアップロードしてください。</div>
+                    : <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+                        {imageFiles.map((f) => (
+                          <button key={f.id} type="button"
+                            onClick={() => { setPlanForm((pf) => ({ ...pf, coverImage: f.url })); setShowImagePicker(false); }}
+                            className={`relative aspect-square overflow-hidden border transition-all hover:border-gold/60 ${planForm.coverImage === f.url ? 'border-gold ring-1 ring-gold' : 'border-white/10'}`}
+                            title={f.name}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
+                            {planForm.coverImage === f.url && (
+                              <div className="absolute inset-0 bg-gold/30 flex items-center justify-center">
+                                <span className="text-gold text-xl font-bold">✓</span>
+                              </div>
+                            )}
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+                              <span className="text-[6px] font-display text-white/40 truncate block">{f.name}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                  }
                 </div>
               </div>
             )}
