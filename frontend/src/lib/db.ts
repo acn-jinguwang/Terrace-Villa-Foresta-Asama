@@ -5,14 +5,17 @@ let pool: mysql.Pool | undefined;
 export function getDb(): mysql.Pool {
   if (!pool) {
     pool = mysql.createPool({
-      host:             process.env.DB_HOST     || 'localhost',
-      port:             Number(process.env.DB_PORT || 3306),
-      user:             process.env.DB_USER     || 'root',
-      password:         process.env.DB_PASS     || '',
-      database:         process.env.DB_NAME     || 'foresta_asama',
-      waitForConnections: true,
-      connectionLimit:  5,
-      charset:          'utf8mb4',
+      host:                 process.env.DB_HOST     || 'localhost',
+      port:                 Number(process.env.DB_PORT || 3306),
+      user:                 process.env.DB_USER     || 'root',
+      password:             process.env.DB_PASS     || '',
+      database:             process.env.DB_NAME     || 'foresta_asama',
+      waitForConnections:   true,
+      connectionLimit:      5,
+      charset:              'utf8mb4',
+      connectTimeout:       5000,
+      enableKeepAlive:      true,
+      keepAliveInitialDelay: 10000,
       // RDS requires SSL; disable for local MySQL by omitting DB_SSL
       ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
     });
@@ -71,10 +74,77 @@ export async function runMigration(): Promise<void> {
       password_hash VARCHAR(255) NOT NULL,
       created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS plan_highlights (
+      id              INT AUTO_INCREMENT PRIMARY KEY,
+      plan_id         VARCHAR(100) NOT NULL,
+      sort_order      INT          DEFAULT 0,
+      title_zh        VARCHAR(500) DEFAULT '',
+      title_ja        VARCHAR(500) DEFAULT '',
+      title_en        VARCHAR(500) DEFAULT '',
+      description_zh  TEXT,
+      description_ja  TEXT,
+      description_en  TEXT,
+      image_url       VARCHAR(1024) DEFAULT '',
+      created_at      DATETIME     DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_plan_id (plan_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS plan_days (
+      id                INT AUTO_INCREMENT PRIMARY KEY,
+      plan_id           VARCHAR(100) NOT NULL,
+      day_number        INT          NOT NULL,
+      title_zh          VARCHAR(500) DEFAULT '',
+      title_ja          VARCHAR(500) DEFAULT '',
+      title_en          VARCHAR(500) DEFAULT '',
+      activities_zh     JSON,
+      activities_ja     JSON,
+      activities_en     JSON,
+      meal_morning_zh   VARCHAR(500) DEFAULT '',
+      meal_morning_ja   VARCHAR(500) DEFAULT '',
+      meal_morning_en   VARCHAR(500) DEFAULT '',
+      meal_lunch_zh     VARCHAR(500) DEFAULT '',
+      meal_lunch_ja     VARCHAR(500) DEFAULT '',
+      meal_lunch_en     VARCHAR(500) DEFAULT '',
+      meal_dinner_zh    VARCHAR(500) DEFAULT '',
+      meal_dinner_ja    VARCHAR(500) DEFAULT '',
+      meal_dinner_en    VARCHAR(500) DEFAULT '',
+      INDEX idx_plan_id (plan_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+    `CREATE TABLE IF NOT EXISTS plan_budget_items (
+      id           INT AUTO_INCREMENT PRIMARY KEY,
+      plan_id      VARCHAR(100) NOT NULL,
+      sort_order   INT          DEFAULT 0,
+      category_zh  VARCHAR(200) DEFAULT '',
+      category_ja  VARCHAR(200) DEFAULT '',
+      category_en  VARCHAR(200) DEFAULT '',
+      amount       VARCHAR(100) DEFAULT '',
+      note_zh      TEXT,
+      note_ja      TEXT,
+      note_en      TEXT,
+      INDEX idx_plan_id (plan_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   ];
 
   for (const sql of tables) {
     await db.query(sql);
   }
+
+  // Extend plans table with new columns (MySQL 8.0 supports ADD COLUMN IF NOT EXISTS)
+  const alterStatements = [
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_zh TEXT`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_ja TEXT`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_en TEXT`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS accommodation_images JSON`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_zh TEXT`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_ja TEXT`,
+    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_en TEXT`,
+  ];
+
+  for (const sql of alterStatements) {
+    await db.query(sql);
+  }
+
   console.log('[db] migration complete');
 }

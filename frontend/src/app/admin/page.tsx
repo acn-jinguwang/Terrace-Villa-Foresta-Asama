@@ -34,6 +34,55 @@ interface PlanEntry {
   createdAt: string;
 }
 
+// ── New plan editor types ──
+type PlanEditorTab = 'basic' | 'accommodation' | 'content' | 'days' | 'conclusion' | 'budget' | 'publish';
+
+interface EditorHighlight {
+  _key: string; // local unique key for React
+  sortOrder: number;
+  titleZh: string; titleJa: string; titleEn: string;
+  descriptionZh: string; descriptionJa: string; descriptionEn: string;
+  imageUrl: string;
+}
+
+interface EditorDay {
+  dayNumber: number;
+  titleZh: string; titleJa: string; titleEn: string;
+  activitiesZh: string; activitiesJa: string; activitiesEn: string; // newline-separated
+  mealMorningZh: string; mealMorningJa: string; mealMorningEn: string;
+  mealLunchZh: string;   mealLunchJa: string;   mealLunchEn: string;
+  mealDinnerZh: string;  mealDinnerJa: string;  mealDinnerEn: string;
+}
+
+interface EditorBudgetItem {
+  _key: string;
+  sortOrder: number;
+  categoryZh: string; categoryJa: string; categoryEn: string;
+  amount: string;
+  noteZh: string; noteJa: string; noteEn: string;
+}
+
+interface EditorForm {
+  // Tab 1: basic
+  coverImage: string;
+  duration: number;
+  price: string;
+  titleZh: string; titleJa: string; titleEn: string;
+  prestigeZh: string; prestigeJa: string; prestigeEn: string;
+  // Tab 2: accommodation
+  accommodationImages: string[];
+  // Tab 3: highlights
+  highlights: EditorHighlight[];
+  // Tab 4: days (auto-generated from duration)
+  days: EditorDay[];
+  // Tab 5: conclusion
+  conclusionZh: string; conclusionJa: string; conclusionEn: string;
+  // Tab 6: budget
+  budgetItems: EditorBudgetItem[];
+  // Tab 7: publish
+  visible: boolean;
+}
+
 // Layout: section key → ordered array of image URLs
 type PageLayouts = Record<string, string[]>;
 
@@ -96,6 +145,28 @@ export default function AdminPage() {
   const [planForm, setPlanForm]         = useState<Omit<PlanEntry, 'createdAt'>>(BLANK_PLAN);
   const [showImagePicker, setShowImagePicker] = useState(false);
   const [planSaving, setPlanSaving]     = useState(false);
+
+  // ── New Plan Editor state ──
+  const [showPlanEditor, setShowPlanEditor]       = useState(false);
+  const [planEditorId, setPlanEditorId]           = useState('');
+  const [planEditorTab, setPlanEditorTab]         = useState<PlanEditorTab>('basic');
+  const [planEditorSaving, setPlanEditorSaving]   = useState(false);
+  const [showNewPlanModal, setShowNewPlanModal]   = useState(false);
+  const [newPlanIdInput, setNewPlanIdInput]       = useState('');
+  const [newPlanCreating, setNewPlanCreating]     = useState(false);
+  // which image picker context: 'cover' | 'accommodation' | `highlight-${key}`
+  const [editorImagePickerCtx, setEditorImagePickerCtx] = useState<string | null>(null);
+  const [editorForm, setEditorForm] = useState<EditorForm>({
+    coverImage: '', duration: 3, price: '¥30,000',
+    titleZh: '', titleJa: '', titleEn: '',
+    prestigeZh: '', prestigeJa: '', prestigeEn: '',
+    accommodationImages: [],
+    highlights: [],
+    days: [],
+    conclusionZh: '', conclusionJa: '', conclusionEn: '',
+    budgetItems: [],
+    visible: true,
+  });
 
   // ── Layout state ──
   const [savedLayout, setSavedLayout]   = useState<PageLayouts>(DEFAULT_LAYOUTS);
@@ -332,6 +403,205 @@ export default function AdminPage() {
     } catch { showMessage('error', t(translations.common.error)); }
     finally { setPlanSaving(false); }
   };
+
+  // ─── Plan Editor helpers ──────────────────────────────────────────────────
+
+  const makeKey = () => Math.random().toString(36).slice(2);
+
+  const makeDaysFromDuration = (n: number): EditorDay[] =>
+    Array.from({ length: n }, (_, i) => ({
+      dayNumber: i + 1,
+      titleZh: '', titleJa: '', titleEn: '',
+      activitiesZh: '', activitiesJa: '', activitiesEn: '',
+      mealMorningZh: '', mealMorningJa: '', mealMorningEn: '',
+      mealLunchZh:   '', mealLunchJa:   '', mealLunchEn:   '',
+      mealDinnerZh:  '', mealDinnerJa:  '', mealDinnerEn:  '',
+    }));
+
+  const openPlanEditor = async (plan: PlanEntry) => {
+    setPlanEditorId(plan.id);
+    setPlanEditorTab('basic');
+    setEditorImagePickerCtx(null);
+    // fetch full plan data
+    try {
+      const res = await fetch(`/api/plans/${plan.id}`);
+      if (res.ok) {
+        const full = await res.json();
+        setEditorForm({
+          coverImage:    full.coverImage    ?? '',
+          duration:      full.duration      ?? 3,
+          price:         full.price         ?? '',
+          titleZh:       full.titleZh       ?? '',
+          titleJa:       full.titleJa       ?? '',
+          titleEn:       full.titleEn       ?? '',
+          prestigeZh:    full.prestigeZh    ?? '',
+          prestigeJa:    full.prestigeJa    ?? '',
+          prestigeEn:    full.prestigeEn    ?? '',
+          accommodationImages: full.accommodationImages ?? [],
+          highlights:    (full.highlights ?? []).map((h: any) => ({
+            _key:          makeKey(),
+            sortOrder:     h.sortOrder,
+            titleZh:       h.titleZh       ?? '',
+            titleJa:       h.titleJa       ?? '',
+            titleEn:       h.titleEn       ?? '',
+            descriptionZh: h.descriptionZh ?? '',
+            descriptionJa: h.descriptionJa ?? '',
+            descriptionEn: h.descriptionEn ?? '',
+            imageUrl:      h.imageUrl      ?? '',
+          })),
+          days:           (full.days ?? []).length > 0
+            ? (full.days ?? []).map((d: any) => ({
+                dayNumber:    d.dayNumber,
+                titleZh:      d.titleZh       ?? '',
+                titleJa:      d.titleJa       ?? '',
+                titleEn:      d.titleEn       ?? '',
+                activitiesZh: (d.activitiesZh ?? []).join('\n'),
+                activitiesJa: (d.activitiesJa ?? []).join('\n'),
+                activitiesEn: (d.activitiesEn ?? []).join('\n'),
+                mealMorningZh: d.mealMorningZh ?? '',
+                mealMorningJa: d.mealMorningJa ?? '',
+                mealMorningEn: d.mealMorningEn ?? '',
+                mealLunchZh:   d.mealLunchZh   ?? '',
+                mealLunchJa:   d.mealLunchJa   ?? '',
+                mealLunchEn:   d.mealLunchEn   ?? '',
+                mealDinnerZh:  d.mealDinnerZh  ?? '',
+                mealDinnerJa:  d.mealDinnerJa  ?? '',
+                mealDinnerEn:  d.mealDinnerEn  ?? '',
+              }))
+            : makeDaysFromDuration(full.duration ?? 3),
+          conclusionZh:  full.conclusionZh  ?? '',
+          conclusionJa:  full.conclusionJa  ?? '',
+          conclusionEn:  full.conclusionEn  ?? '',
+          budgetItems:   (full.budgetItems ?? []).map((b: any) => ({
+            _key:       makeKey(),
+            sortOrder:  b.sortOrder,
+            categoryZh: b.categoryZh ?? '',
+            categoryJa: b.categoryJa ?? '',
+            categoryEn: b.categoryEn ?? '',
+            amount:     b.amount     ?? '',
+            noteZh:     b.noteZh     ?? '',
+            noteJa:     b.noteJa     ?? '',
+            noteEn:     b.noteEn     ?? '',
+          })),
+          visible: full.visible ?? true,
+        });
+      }
+    } catch { /* use defaults */ }
+    setShowPlanEditor(true);
+  };
+
+  const handleSaveAllPlan = async () => {
+    setPlanEditorSaving(true);
+    try {
+      const f = editorForm;
+      // 1. PUT basic plan data
+      const planRes = await fetch(`/api/plans/${planEditorId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titleZh: f.titleZh, titleJa: f.titleJa, titleEn: f.titleEn,
+          prestigeZh: f.prestigeZh, prestigeJa: f.prestigeJa, prestigeEn: f.prestigeEn,
+          coverImage: f.coverImage,
+          accommodationImages: f.accommodationImages,
+          conclusionZh: f.conclusionZh, conclusionJa: f.conclusionJa, conclusionEn: f.conclusionEn,
+          duration: f.duration,
+          price: f.price,
+          visible: f.visible,
+        }),
+      });
+      if (!planRes.ok) { showMessage('error', 'プランの保存に失敗しました'); return; }
+
+      // 2. PUT highlights
+      const highlightsPayload = f.highlights.map((h, i) => ({
+        sortOrder: i,
+        titleZh: h.titleZh, titleJa: h.titleJa, titleEn: h.titleEn,
+        descriptionZh: h.descriptionZh, descriptionJa: h.descriptionJa, descriptionEn: h.descriptionEn,
+        imageUrl: h.imageUrl,
+      }));
+      const hlRes = await fetch(`/api/plans/${planEditorId}/highlights`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(highlightsPayload),
+      });
+      if (!hlRes.ok) { showMessage('error', 'ハイライトの保存に失敗しました'); return; }
+
+      // 3. PUT days
+      const daysPayload = f.days.map((d) => ({
+        dayNumber: d.dayNumber,
+        titleZh: d.titleZh, titleJa: d.titleJa, titleEn: d.titleEn,
+        activitiesZh: d.activitiesZh.split('\n').filter(Boolean),
+        activitiesJa: d.activitiesJa.split('\n').filter(Boolean),
+        activitiesEn: d.activitiesEn.split('\n').filter(Boolean),
+        mealMorningZh: d.mealMorningZh, mealMorningJa: d.mealMorningJa, mealMorningEn: d.mealMorningEn,
+        mealLunchZh:   d.mealLunchZh,   mealLunchJa:   d.mealLunchJa,   mealLunchEn:   d.mealLunchEn,
+        mealDinnerZh:  d.mealDinnerZh,  mealDinnerJa:  d.mealDinnerJa,  mealDinnerEn:  d.mealDinnerEn,
+      }));
+      const daysRes = await fetch(`/api/plans/${planEditorId}/days`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(daysPayload),
+      });
+      if (!daysRes.ok) { showMessage('error', '日程の保存に失敗しました'); return; }
+
+      // 4. PUT budget
+      const budgetPayload = f.budgetItems.map((b, i) => ({
+        sortOrder: i,
+        categoryZh: b.categoryZh, categoryJa: b.categoryJa, categoryEn: b.categoryEn,
+        amount: b.amount,
+        noteZh: b.noteZh, noteJa: b.noteJa, noteEn: b.noteEn,
+      }));
+      const budgetRes = await fetch(`/api/plans/${planEditorId}/budget`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(budgetPayload),
+      });
+      if (!budgetRes.ok) { showMessage('error', '予算の保存に失敗しました'); return; }
+
+      // Update local plan list
+      const updated: PlanEntry = await planRes.json();
+      setPlans((prev) => prev.map((p) => p.id === updated.id ? updated : p));
+      showMessage('success', '全ての変更を保存しました');
+    } catch (err) {
+      showMessage('error', String(err));
+    } finally {
+      setPlanEditorSaving(false);
+    }
+  };
+
+  const handleCreateNewPlan = async () => {
+    const id = newPlanIdInput.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!id) { showMessage('error', 'Plan ID を入力してください'); return; }
+    setNewPlanCreating(true);
+    try {
+      const res = await fetch('/api/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, titleZh: id }),
+      });
+      if (res.ok) {
+        const created: PlanEntry = await res.json();
+        setPlans((prev) => [...prev, created]);
+        setShowNewPlanModal(false);
+        setNewPlanIdInput('');
+        await openPlanEditor(created);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showMessage('error', (err as { error?: string }).error ?? t(translations.common.error));
+      }
+    } catch { showMessage('error', t(translations.common.error)); }
+    finally { setNewPlanCreating(false); }
+  };
+
+  const editorBudgetTotal = (() => {
+    let total = 0; let hasAny = false;
+    for (const item of editorForm.budgetItems) {
+      if (item.amount.startsWith('¥')) {
+        const num = parseInt(item.amount.replace(/[¥,]/g, ''), 10);
+        if (!isNaN(num)) { total += num; hasAny = true; }
+      }
+    }
+    return hasAny ? `¥${total.toLocaleString()}` : null;
+  })();
 
   // ─── Bulk delete unused ───────────────────────────────────────────────────
 
@@ -718,10 +988,16 @@ export default function AdminPage() {
               <div className="text-white/40 font-display text-xs uppercase tracking-widest">
                 {plans.filter((p) => p.visible).length} visible · {plans.length} total
               </div>
-              <button onClick={openAddPlan}
-                className="bg-gold text-black font-display text-xs uppercase tracking-[0.3em] px-6 py-2.5 hover:bg-gold/80 transition-colors">
-                + Add Plan
-              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={() => { setShowNewPlanModal(true); setNewPlanIdInput(''); }}
+                  className="bg-gold text-black font-display text-xs uppercase tracking-[0.3em] px-6 py-2.5 hover:bg-gold/80 transition-colors">
+                  + 新規作成
+                </button>
+                <button onClick={openAddPlan}
+                  className="border border-white/20 text-white/50 font-display text-xs uppercase tracking-[0.3em] px-4 py-2.5 hover:border-gold/40 hover:text-gold/70 transition-colors">
+                  + Legacy
+                </button>
+              </div>
             </div>
             <div className="luxury-card overflow-x-auto">
               <table className="w-full text-sm min-w-[600px]">
@@ -776,8 +1052,10 @@ export default function AdminPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => { setActiveTab('layout'); setLayoutPage(`plan-${plan.id}`); }}
                             className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/30 hover:border-gold/30 hover:text-gold/70 transition-all">Gallery</button>
+                          <button onClick={() => openPlanEditor(plan)}
+                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-gold/30 text-gold/60 hover:border-gold hover:text-gold transition-all">編集</button>
                           <button onClick={() => openEditPlan(plan)}
-                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold transition-all">Edit</button>
+                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold transition-all">Legacy</button>
                           <button onClick={() => handleDeletePlan(plan.id)}
                             className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-red-500/20 text-red-400/60 hover:border-red-400/40 hover:text-red-400 transition-all">Delete</button>
                         </div>
@@ -1304,6 +1582,558 @@ export default function AdminPage() {
           );
         })()}
       </div>
+
+      {/* ══════════════════ NEW PLAN MODAL ══════════════════ */}
+      {showNewPlanModal && (
+        <div className="fixed inset-0 bg-black/80 z-[300] flex items-center justify-center px-4">
+          <div className="w-full max-w-sm bg-[#0a0a0a] border border-white/10 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-gold text-sm uppercase tracking-widest">新規プラン作成</h2>
+              <button onClick={() => setShowNewPlanModal(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
+            </div>
+            <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">
+              Plan ID <span className="text-red-400">*</span>
+            </label>
+            <input
+              value={newPlanIdInput}
+              onChange={(e) => setNewPlanIdInput(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCreateNewPlan(); }}
+              placeholder="e.g. winter-ski"
+              autoFocus
+              className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none mb-1"
+            />
+            <p className="text-white/20 text-[10px] font-display mb-6">小文字・ハイフンのみ。URL: /plans/[id]</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setShowNewPlanModal(false)}
+                className="px-5 py-2 border border-white/10 text-white/40 hover:text-white font-display text-xs uppercase tracking-widest transition-all">キャンセル</button>
+              <button onClick={handleCreateNewPlan} disabled={newPlanCreating || !newPlanIdInput.trim()}
+                className="px-6 py-2 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
+                {newPlanCreating ? '作成中...' : '作成して編集'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════ PLAN EDITOR OVERLAY ══════════════════ */}
+      {showPlanEditor && (() => {
+        const f = editorForm;
+
+        // Input style helper
+        const inp = "w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:border-gold/50 focus:outline-none";
+        const ta  = "w-full bg-white/5 border border-white/10 text-white px-3 py-2 text-sm focus:border-gold/50 focus:outline-none resize-none";
+        const langLabel = (l: string) => <span className="flex-shrink-0 text-white/30 text-[10px] font-display uppercase w-6 pt-2">{l}</span>;
+
+        // ── Tab 1: Basic Info ────────────────────────────────────────────────
+        const renderBasicTab = () => (
+          <div className="space-y-6">
+            {/* Cover Image */}
+            <div>
+              <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">カバー画像</label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-32 h-20 overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
+                  {f.coverImage
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={f.coverImage} alt="" className="w-full h-full object-cover" />
+                    : <div className="w-full h-full flex items-center justify-center"><span className="text-white/20 text-[8px] font-display uppercase">No image</span></div>
+                  }
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => setEditorImagePickerCtx('cover')}
+                    className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
+                    {f.coverImage ? '変更' : '選択'}
+                  </button>
+                  {f.coverImage && (
+                    <button type="button" onClick={() => setEditorForm((ef) => ({ ...ef, coverImage: '' }))}
+                      className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-red-500/20 text-red-400/50 hover:border-red-400/40 hover:text-red-400 transition-all">
+                      削除
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Duration + Price */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">泊数 (Duration)</label>
+                <input type="number" min={1} value={f.duration}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    setEditorForm((ef) => ({
+                      ...ef,
+                      duration: n,
+                      days: ef.days.length === n ? ef.days : makeDaysFromDuration(n),
+                    }));
+                  }}
+                  className={inp} />
+              </div>
+              <div>
+                <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">料金 (Price)</label>
+                <input value={f.price}
+                  onChange={(e) => setEditorForm((ef) => ({ ...ef, price: e.target.value }))}
+                  placeholder="¥60,000" className={inp} />
+              </div>
+            </div>
+            {/* Title */}
+            <div>
+              <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">タイトル</label>
+              {(['zh', 'ja', 'en'] as const).map((l) => (
+                <div key={l} className="flex gap-2 items-start mb-2">
+                  {langLabel(l)}
+                  <input value={(f as any)[`title${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                    onChange={(e) => setEditorForm((ef) => ({ ...ef, [`title${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value }))}
+                    className={inp} />
+                </div>
+              ))}
+            </div>
+            {/* Prestige */}
+            <div>
+              <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">The Prestige (ヒーローサブタイトル)</label>
+              {(['zh', 'ja', 'en'] as const).map((l) => (
+                <div key={l} className="flex gap-2 items-start mb-2">
+                  {langLabel(l)}
+                  <textarea value={(f as any)[`prestige${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                    onChange={(e) => setEditorForm((ef) => ({ ...ef, [`prestige${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value }))}
+                    rows={2} className={ta} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+        // ── Tab 2: Accommodation ─────────────────────────────────────────────
+        const renderAccommodationTab = () => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">宿泊施設画像 (最大5枚)</label>
+              {f.accommodationImages.length < 5 && (
+                <button type="button" onClick={() => setEditorImagePickerCtx('accommodation')}
+                  className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
+                  + 宿泊施設画像を追加
+                </button>
+              )}
+            </div>
+            {f.accommodationImages.length === 0
+              ? <div className="text-white/20 text-sm font-kaiti italic text-center py-8 border border-dashed border-white/10">画像が未設定です</div>
+              : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {f.accommodationImages.map((url, idx) => (
+                    <div key={idx} className="relative group">
+                      <div className="relative aspect-[4/3] overflow-hidden border border-white/10">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <button
+                        onClick={() => setEditorForm((ef) => ({ ...ef, accommodationImages: ef.accommodationImages.filter((_, i) => i !== idx) }))}
+                        className="absolute top-1 right-1 w-6 h-6 bg-black/80 border border-white/20 text-white/60 hover:text-red-400 flex items-center justify-center text-xs transition-all">
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </div>
+        );
+
+        // ── Tab 3: Highlights ────────────────────────────────────────────────
+        const renderHighlightsTab = () => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-white/40 text-[10px] uppercase tracking-widest font-display">{f.highlights.length} / 10</span>
+              {f.highlights.length < 10 && (
+                <button type="button"
+                  onClick={() => setEditorForm((ef) => ({
+                    ...ef,
+                    highlights: [...ef.highlights, {
+                      _key: makeKey(), sortOrder: ef.highlights.length,
+                      titleZh: '', titleJa: '', titleEn: '',
+                      descriptionZh: '', descriptionJa: '', descriptionEn: '',
+                      imageUrl: '',
+                    }],
+                  }))}
+                  className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
+                  ＋ 項目を追加
+                </button>
+              )}
+            </div>
+            {f.highlights.map((h, idx) => (
+              <div key={h._key} className="border border-white/10 p-4 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gold/60 text-[10px] font-display uppercase tracking-widest">#{idx + 1}</span>
+                  <div className="flex items-center gap-2">
+                    <button disabled={idx === 0}
+                      onClick={() => setEditorForm((ef) => { const arr = [...ef.highlights]; [arr[idx-1], arr[idx]] = [arr[idx], arr[idx-1]]; return { ...ef, highlights: arr }; })}
+                      className="text-white/30 hover:text-gold disabled:opacity-20 text-xs transition-colors">▲</button>
+                    <button disabled={idx === f.highlights.length - 1}
+                      onClick={() => setEditorForm((ef) => { const arr = [...ef.highlights]; [arr[idx], arr[idx+1]] = [arr[idx+1], arr[idx]]; return { ...ef, highlights: arr }; })}
+                      className="text-white/30 hover:text-gold disabled:opacity-20 text-xs transition-colors">▼</button>
+                    <button
+                      onClick={() => setEditorForm((ef) => ({ ...ef, highlights: ef.highlights.filter((_, i) => i !== idx) }))}
+                      className="text-red-400/50 hover:text-red-400 text-[10px] font-display uppercase tracking-widest border border-red-500/20 px-2 py-0.5 transition-all">削除</button>
+                  </div>
+                </div>
+                {/* Image picker */}
+                <div className="flex items-center gap-3">
+                  <div className="relative w-16 h-12 overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
+                    {h.imageUrl
+                      // eslint-disable-next-line @next/next/no-img-element
+                      ? <img src={h.imageUrl} alt="" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full flex items-center justify-center"><span className="text-white/20 text-[7px] font-display">No img</span></div>
+                    }
+                  </div>
+                  <button type="button" onClick={() => setEditorImagePickerCtx(`highlight-${h._key}`)}
+                    className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/20 text-white/40 hover:border-gold/40 hover:text-gold transition-all">
+                    画像を選択
+                  </button>
+                  {h.imageUrl && (
+                    <button type="button" onClick={() => setEditorForm((ef) => ({
+                      ...ef, highlights: ef.highlights.map((item, i) => i === idx ? { ...item, imageUrl: '' } : item)
+                    }))}
+                      className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-red-500/20 text-red-400/50 hover:text-red-400 transition-all">削除</button>
+                  )}
+                </div>
+                {/* Title */}
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">タイトル</label>
+                  {(['zh', 'ja', 'en'] as const).map((l) => (
+                    <div key={l} className="flex gap-2 items-center mb-1.5">
+                      {langLabel(l)}
+                      <input value={(h as any)[`title${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                        onChange={(e) => setEditorForm((ef) => ({
+                          ...ef, highlights: ef.highlights.map((item, i) => i === idx ? { ...item, [`title${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : item)
+                        }))}
+                        className={inp} />
+                    </div>
+                  ))}
+                </div>
+                {/* Description */}
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">説明</label>
+                  {(['zh', 'ja', 'en'] as const).map((l) => (
+                    <div key={l} className="flex gap-2 items-start mb-1.5">
+                      {langLabel(l)}
+                      <textarea value={(h as any)[`description${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                        onChange={(e) => setEditorForm((ef) => ({
+                          ...ef, highlights: ef.highlights.map((item, i) => i === idx ? { ...item, [`description${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : item)
+                        }))}
+                        rows={2} className={ta} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {f.highlights.length === 0 && (
+              <div className="text-white/20 text-sm font-kaiti italic text-center py-8 border border-dashed border-white/10">
+                ハイライト未設定 — ＋ 項目を追加 で追加してください
+              </div>
+            )}
+          </div>
+        );
+
+        // ── Tab 4: Days ──────────────────────────────────────────────────────
+        const renderDaysTab = () => (
+          <div className="space-y-6">
+            <div className="text-white/30 text-[10px] font-display uppercase tracking-widest">
+              {f.duration} 日間 — 基本情報タブの泊数と連動
+            </div>
+            {f.days.map((day, idx) => (
+              <div key={day.dayNumber} className="border border-white/10 p-4 space-y-4">
+                <div className="font-display text-gold/60 text-[10px] uppercase tracking-widest mb-2">
+                  Day {day.dayNumber}
+                </div>
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">タイトル</label>
+                  {(['zh', 'ja', 'en'] as const).map((l) => (
+                    <div key={l} className="flex gap-2 items-center mb-1.5">
+                      {langLabel(l)}
+                      <input value={(day as any)[`title${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                        onChange={(e) => setEditorForm((ef) => ({
+                          ...ef, days: ef.days.map((d, i) => i === idx ? { ...d, [`title${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : d)
+                        }))}
+                        className={inp} />
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">アクティビティ (1行1項目)</label>
+                  {(['zh', 'ja', 'en'] as const).map((l) => (
+                    <div key={l} className="flex gap-2 items-start mb-1.5">
+                      {langLabel(l)}
+                      <textarea value={(day as any)[`activities${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                        onChange={(e) => setEditorForm((ef) => ({
+                          ...ef, days: ef.days.map((d, i) => i === idx ? { ...d, [`activities${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : d)
+                        }))}
+                        rows={3} className={ta} />
+                    </div>
+                  ))}
+                </div>
+                {/* Meals */}
+                {[
+                  { field: 'mealMorning', label: '朝食 Morning' },
+                  { field: 'mealLunch',   label: '昼食 Lunch' },
+                  { field: 'mealDinner',  label: '夕食 Dinner' },
+                ].map(({ field, label }) => (
+                  <div key={field}>
+                    <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">{label}</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['zh', 'ja', 'en'] as const).map((l) => (
+                        <div key={l} className="flex gap-1 items-center">
+                          <span className="text-white/20 text-[9px] font-display w-4">{l}</span>
+                          <input value={(day as any)[`${field}${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                            onChange={(e) => setEditorForm((ef) => ({
+                              ...ef, days: ef.days.map((d, i) => i === idx ? { ...d, [`${field}${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : d)
+                            }))}
+                            className="flex-1 bg-white/5 border border-white/10 text-white px-2 py-1.5 text-xs focus:border-gold/50 focus:outline-none" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+
+        // ── Tab 5: Conclusion ────────────────────────────────────────────────
+        const renderConclusionTab = () => (
+          <div className="space-y-4">
+            <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display">結語テキスト</label>
+            {(['zh', 'ja', 'en'] as const).map((l) => (
+              <div key={l} className="flex gap-2 items-start">
+                {langLabel(l)}
+                <textarea value={(f as any)[`conclusion${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                  onChange={(e) => setEditorForm((ef) => ({ ...ef, [`conclusion${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value }))}
+                  rows={5} className={ta} />
+              </div>
+            ))}
+          </div>
+        );
+
+        // ── Tab 6: Budget ────────────────────────────────────────────────────
+        const renderBudgetTab = () => (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-white/40 text-[10px] uppercase tracking-widest font-display">
+                {editorBudgetTotal ? `合計: ${editorBudgetTotal}` : '合計: —'}
+              </span>
+              <button type="button"
+                onClick={() => setEditorForm((ef) => ({
+                  ...ef,
+                  budgetItems: [...ef.budgetItems, {
+                    _key: makeKey(), sortOrder: ef.budgetItems.length,
+                    categoryZh: '', categoryJa: '', categoryEn: '',
+                    amount: '', noteZh: '', noteJa: '', noteEn: '',
+                  }],
+                }))}
+                className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
+                ＋ 行を追加
+              </button>
+            </div>
+            {f.budgetItems.map((item, idx) => (
+              <div key={item._key} className="border border-white/10 p-4 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-gold/60 text-[10px] font-display uppercase tracking-widest">#{idx + 1}</span>
+                  <button
+                    onClick={() => setEditorForm((ef) => ({ ...ef, budgetItems: ef.budgetItems.filter((_, i) => i !== idx) }))}
+                    className="text-red-400/50 hover:text-red-400 text-[10px] font-display uppercase tracking-widest border border-red-500/20 px-2 py-0.5 transition-all">削除</button>
+                </div>
+                {/* Category */}
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">カテゴリー</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['zh', 'ja', 'en'] as const).map((l) => (
+                      <div key={l} className="flex gap-1 items-center">
+                        <span className="text-white/20 text-[9px] font-display w-4">{l}</span>
+                        <input value={(item as any)[`category${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                          onChange={(e) => setEditorForm((ef) => ({
+                            ...ef, budgetItems: ef.budgetItems.map((bi, i) => i === idx ? { ...bi, [`category${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : bi)
+                          }))}
+                          className="flex-1 bg-white/5 border border-white/10 text-white px-2 py-1.5 text-xs focus:border-gold/50 focus:outline-none" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Amount */}
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">金額</label>
+                  <input value={item.amount}
+                    onChange={(e) => setEditorForm((ef) => ({
+                      ...ef, budgetItems: ef.budgetItems.map((bi, i) => i === idx ? { ...bi, amount: e.target.value } : bi)
+                    }))}
+                    placeholder="¥25,000"
+                    className="w-48 bg-white/5 border border-white/10 text-white px-3 py-1.5 text-sm focus:border-gold/50 focus:outline-none" />
+                </div>
+                {/* Note */}
+                <div>
+                  <label className="block text-white/30 text-[9px] uppercase tracking-widest font-display mb-1">説明</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['zh', 'ja', 'en'] as const).map((l) => (
+                      <div key={l} className="flex gap-1 items-center">
+                        <span className="text-white/20 text-[9px] font-display w-4">{l}</span>
+                        <input value={(item as any)[`note${l.charAt(0).toUpperCase() + l.slice(1)}`]}
+                          onChange={(e) => setEditorForm((ef) => ({
+                            ...ef, budgetItems: ef.budgetItems.map((bi, i) => i === idx ? { ...bi, [`note${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value } : bi)
+                          }))}
+                          className="flex-1 bg-white/5 border border-white/10 text-white px-2 py-1.5 text-xs focus:border-gold/50 focus:outline-none" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {f.budgetItems.length === 0 && (
+              <div className="text-white/20 text-sm font-kaiti italic text-center py-8 border border-dashed border-white/10">
+                予算項目未設定 — ＋ 行を追加 で追加してください
+              </div>
+            )}
+          </div>
+        );
+
+        // ── Tab 7: Publish ───────────────────────────────────────────────────
+        const renderPublishTab = () => (
+          <div className="space-y-6">
+            <div>
+              <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">Plan ID (読み取り専用)</label>
+              <div className="font-display text-white/60 text-sm px-3 py-2 border border-white/10 bg-white/3">{planEditorId}</div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">サイトに公開する</label>
+              <button onClick={() => setEditorForm((ef) => ({ ...ef, visible: !ef.visible }))}
+                className={`w-12 h-6 rounded-full transition-all relative ${f.visible ? 'bg-gold' : 'bg-white/10'}`}>
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-black transition-all ${f.visible ? 'left-7' : 'left-1'}`} />
+              </button>
+              <span className={`text-sm font-display ${f.visible ? 'text-gold' : 'text-white/30'}`}>
+                {f.visible ? '公開中' : '非公開'}
+              </span>
+            </div>
+          </div>
+        );
+
+        // ── Tab content dispatcher ───────────────────────────────────────────
+        const renderTabContent = () => {
+          switch (planEditorTab) {
+            case 'basic':          return renderBasicTab();
+            case 'accommodation':  return renderAccommodationTab();
+            case 'content':        return renderHighlightsTab();
+            case 'days':           return renderDaysTab();
+            case 'conclusion':     return renderConclusionTab();
+            case 'budget':         return renderBudgetTab();
+            case 'publish':        return renderPublishTab();
+          }
+        };
+
+        // ── Image picker for editor ──────────────────────────────────────────
+        const renderEditorImagePicker = () => {
+          if (!editorImagePickerCtx) return null;
+          const ctx = editorImagePickerCtx;
+          const onPick = (url: string) => {
+            if (ctx === 'cover') {
+              setEditorForm((ef) => ({ ...ef, coverImage: url }));
+            } else if (ctx === 'accommodation') {
+              setEditorForm((ef) => ({
+                ...ef,
+                accommodationImages: ef.accommodationImages.includes(url)
+                  ? ef.accommodationImages
+                  : [...ef.accommodationImages, url].slice(0, 5),
+              }));
+            } else if (ctx.startsWith('highlight-')) {
+              const key = ctx.replace('highlight-', '');
+              setEditorForm((ef) => ({
+                ...ef,
+                highlights: ef.highlights.map((h) => h._key === key ? { ...h, imageUrl: url } : h),
+              }));
+            }
+            setEditorImagePickerCtx(null);
+          };
+
+          return (
+            <div className="fixed inset-0 bg-black/90 z-[600] flex items-start justify-center overflow-y-auto py-6 px-4">
+              <div className="w-full max-w-3xl bg-[#0a0a0a] border border-white/10 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-gold text-sm uppercase tracking-widest">画像を選択</h3>
+                  <button onClick={() => setEditorImagePickerCtx(null)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
+                </div>
+                {imageFiles.length === 0
+                  ? <div className="text-white/20 text-sm font-kaiti italic text-center py-12">画像がありません。先に Images タブからアップロードしてください。</div>
+                  : <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+                      {imageFiles.map((imgF) => (
+                        <button key={imgF.id} type="button"
+                          onClick={() => onPick(imgF.url)}
+                          className="relative aspect-square overflow-hidden border border-white/10 hover:border-gold/60 transition-all"
+                          title={imgF.name}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={imgF.url} alt={imgF.name} className="w-full h-full object-cover" />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
+                            <span className="text-[6px] font-display text-white/40 truncate block">{imgF.name}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                }
+              </div>
+            </div>
+          );
+        };
+
+        const editorTabs: { id: PlanEditorTab; label: string }[] = [
+          { id: 'basic',         label: '基本情報' },
+          { id: 'accommodation', label: 'Accommodation' },
+          { id: 'content',       label: 'コンテンツ' },
+          { id: 'days',          label: '日程' },
+          { id: 'conclusion',    label: 'Conclusion' },
+          { id: 'budget',        label: 'Budget' },
+          { id: 'publish',       label: '公開設定' },
+        ];
+
+        return (
+          <div className="fixed inset-0 z-[500] bg-[#050505] flex flex-col">
+            {/* Editor header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-6 py-3 border-b border-white/10 bg-[#0a0a0a]">
+              <div className="flex items-center gap-3">
+                <div className="gold-line" />
+                <span className="font-display text-gold text-xs uppercase tracking-[0.4em]">Plan Editor</span>
+                <span className="text-white/30 font-display text-xs">— {planEditorId}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={handleSaveAllPlan} disabled={planEditorSaving}
+                  className="px-6 py-2 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
+                  {planEditorSaving ? '保存中...' : 'Save All'}
+                </button>
+                <button onClick={() => setShowPlanEditor(false)}
+                  className="w-8 h-8 flex items-center justify-center text-white/40 hover:text-white border border-white/10 hover:border-white/30 transition-all text-lg">
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Tab bar */}
+            <div className="flex-shrink-0 flex overflow-x-auto border-b border-white/10 bg-[#0a0a0a]">
+              {editorTabs.map((tab) => (
+                <button key={tab.id}
+                  onClick={() => setPlanEditorTab(tab.id)}
+                  className={`px-5 py-3 flex-shrink-0 font-display text-xs uppercase tracking-widest transition-all ${
+                    planEditorTab === tab.id
+                      ? 'text-gold border-b-2 border-gold'
+                      : 'text-white/30 hover:text-white/60'
+                  }`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div className="max-w-3xl mx-auto">
+                {renderTabContent()}
+              </div>
+            </div>
+
+            {/* Image picker overlay (inside editor) */}
+            {renderEditorImagePicker()}
+          </div>
+        );
+      })()}
 
       {/* ══════════════════ PUBLISH CONFIRM MODAL ══════════════════ */}
       {showPublishConfirm && (
