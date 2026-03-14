@@ -131,19 +131,27 @@ export async function runMigration(): Promise<void> {
     await db.query(sql);
   }
 
-  // Extend plans table with new columns (MySQL 8.0 supports ADD COLUMN IF NOT EXISTS)
-  const alterStatements = [
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_zh TEXT`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_ja TEXT`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS prestige_en TEXT`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS accommodation_images JSON`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_zh TEXT`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_ja TEXT`,
-    `ALTER TABLE plans ADD COLUMN IF NOT EXISTS conclusion_en TEXT`,
+  // Extend plans table with new columns — MySQL 5.7 compatible (no ADD COLUMN IF NOT EXISTS)
+  const newColumns: [string, string][] = [
+    ['prestige_zh',           'TEXT'],
+    ['prestige_ja',           'TEXT'],
+    ['prestige_en',           'TEXT'],
+    ['accommodation_images',  'JSON'],
+    ['conclusion_zh',         'TEXT'],
+    ['conclusion_ja',         'TEXT'],
+    ['conclusion_en',         'TEXT'],
   ];
 
-  for (const sql of alterStatements) {
-    await db.query(sql);
+  const dbName = process.env.DB_NAME || 'foresta_asama';
+  for (const [col, colType] of newColumns) {
+    const [rows] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
+       WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'plans' AND COLUMN_NAME = ?`,
+      [dbName, col],
+    ) as any[][];
+    if (rows[0].cnt === 0) {
+      await db.query(`ALTER TABLE plans ADD COLUMN ${col} ${colType}`);
+    }
   }
 
   console.log('[db] migration complete');
