@@ -35,7 +35,7 @@ interface PlanEntry {
 }
 
 // ── New plan editor types ──
-type PlanEditorTab = 'basic' | 'accommodation' | 'content' | 'days' | 'conclusion' | 'budget' | 'publish';
+type PlanEditorTab = 'basic' | 'accommodation' | 'content' | 'gallery' | 'days' | 'conclusion' | 'budget' | 'publish';
 
 interface EditorHighlight {
   _key: string; // local unique key for React
@@ -75,6 +75,8 @@ interface EditorForm {
   highlights: EditorHighlight[];
   // Tab 4: days (auto-generated from duration)
   days: EditorDay[];
+  // Tab 4b: gallery
+  galleryUrls: string[];
   // Tab 5: conclusion
   conclusionZh: string; conclusionJa: string; conclusionEn: string;
   // Tab 6: budget
@@ -86,14 +88,6 @@ interface EditorForm {
 // Layout: section key → ordered array of image URLs
 type PageLayouts = Record<string, string[]>;
 
-const BLANK_PLAN: Omit<PlanEntry, 'createdAt'> = {
-  id: '', titleZh: '', titleJa: '', titleEn: '',
-  descZh: '', descJa: '', descEn: '',
-  duration: 3, price: '¥30,000',
-  tagZh: '', tagJa: '', tagEn: '',
-  highlightsZh: ['', '', ''], highlightsJa: ['', '', ''], highlightsEn: ['', '', ''],
-  coverImage: '', visible: true,
-};
 
 const DEFAULT_LAYOUTS: PageLayouts = {
   'home.hero':           [],
@@ -140,11 +134,6 @@ export default function AdminPage() {
   // ── Plans state ──
   const [plans, setPlans]               = useState<PlanEntry[]>([]);
   const [plansLoading, setPlansLoading] = useState(true);
-  const [showPlanForm, setShowPlanForm] = useState(false);
-  const [editingPlan, setEditingPlan]   = useState<PlanEntry | null>(null);
-  const [planForm, setPlanForm]         = useState<Omit<PlanEntry, 'createdAt'>>(BLANK_PLAN);
-  const [showImagePicker, setShowImagePicker] = useState(false);
-  const [planSaving, setPlanSaving]     = useState(false);
 
   // ── New Plan Editor state ──
   const [showPlanEditor, setShowPlanEditor]       = useState(false);
@@ -163,6 +152,7 @@ export default function AdminPage() {
     accommodationImages: [],
     highlights: [],
     days: [],
+    galleryUrls: [],
     conclusionZh: '', conclusionJa: '', conclusionEn: '',
     budgetItems: [],
     visible: true,
@@ -171,7 +161,6 @@ export default function AdminPage() {
   // ── Layout state ──
   const [savedLayout, setSavedLayout]   = useState<PageLayouts>(DEFAULT_LAYOUTS);
   const [draftLayout, setDraftLayout]   = useState<PageLayouts | null>(null);
-  const [draftPlans, setDraftPlans]     = useState<PlanEntry[] | null>(null);
   const [layoutPage, setLayoutPage]     = useState<string>('home');
 
   // ── Layout drag state ──
@@ -200,8 +189,8 @@ export default function AdminPage() {
 
   // ── Computed ──
   const currentLayout  = draftLayout ?? savedLayout;
-  const layoutPlans    = draftPlans  ?? plans;
-  const hasLayoutChanges = draftLayout !== null || draftPlans !== null;
+  const layoutPlans    = plans;
+  const hasLayoutChanges = draftLayout !== null;
 
   const changeCount = (() => {
     let n = 0;
@@ -209,11 +198,6 @@ export default function AdminPage() {
       for (const [k, urls] of Object.entries(draftLayout)) {
         if (JSON.stringify(urls) !== JSON.stringify(savedLayout[k] ?? [])) n++;
       }
-    }
-    if (draftPlans) {
-      draftPlans.forEach((dp) => {
-        if (plans.find((p) => p.id === dp.id)?.coverImage !== dp.coverImage) n++;
-      });
     }
     return n;
   })();
@@ -307,16 +291,16 @@ export default function AdminPage() {
       if (urls.includes(file.url)) {
         if (section.startsWith('plan.') && section.endsWith('.gallery')) {
           const planId = section.replace('plan.', '').replace('.gallery', '');
-          const plan = (draftPlans ?? plans).find((p) => p.id === planId);
+          const plan = plans.find((p) => p.id === planId);
           return `Plan "${plan?.titleEn ?? planId}" › Gallery`;
         }
         return LAYOUT_SECTION_LABELS[section] ?? section;
       }
     }
-    const planCover = (draftPlans ?? plans).find((p) => p.coverImage === file.url);
+    const planCover = plans.find((p) => p.coverImage === file.url);
     if (planCover) return `Plan "${planCover.titleEn || planCover.id}" › Cover`;
     return null;
-  }, [currentLayout, draftPlans, plans]);
+  }, [currentLayout, plans]);
 
   // ─── Delete media ────────────────────────────────────────────────────────
 
@@ -334,14 +318,6 @@ export default function AdminPage() {
   };
 
   // ─── Plans CRUD ──────────────────────────────────────────────────────────
-
-  const openAddPlan  = () => { setEditingPlan(null); setPlanForm(BLANK_PLAN); setShowPlanForm(true); };
-  const openEditPlan = (plan: PlanEntry) => {
-    setEditingPlan(plan);
-    const { createdAt: _, ...rest } = plan; void _;
-    setPlanForm(rest);
-    setShowPlanForm(true);
-  };
 
   const handleToggleVisible = async (plan: PlanEntry) => {
     try {
@@ -377,31 +353,6 @@ export default function AdminPage() {
         body: JSON.stringify({ order: newPlans.map((p) => p.id) }),
       });
     } catch { showMessage('error', t(translations.common.error)); }
-  };
-
-  const handleSavePlan = async () => {
-    if (!planForm.id.trim() || !planForm.titleZh.trim()) {
-      showMessage('error', 'Plan ID and Chinese title are required.');
-      return;
-    }
-    setPlanSaving(true);
-    try {
-      const isNew = !editingPlan;
-      const res = await fetch(
-        isNew ? '/api/plans' : `/api/plans/${editingPlan!.id}`,
-        { method: isNew ? 'POST' : 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(planForm) }
-      );
-      if (res.ok) {
-        const saved: PlanEntry = await res.json();
-        setPlans((prev) => isNew ? [...prev, saved] : prev.map((p) => p.id === saved.id ? saved : p));
-        setShowPlanForm(false);
-        showMessage('success', isNew ? 'Plan created.' : 'Plan updated.');
-      } else {
-        const err = await res.json().catch(() => ({}));
-        showMessage('error', (err as { error?: string }).error ?? t(translations.common.error));
-      }
-    } catch { showMessage('error', t(translations.common.error)); }
-    finally { setPlanSaving(false); }
   };
 
   // ─── Plan Editor helpers ──────────────────────────────────────────────────
@@ -469,6 +420,7 @@ export default function AdminPage() {
                 mealDinnerEn:  d.mealDinnerEn  ?? '',
               }))
             : makeDaysFromDuration(full.duration ?? 3),
+          galleryUrls: [],
           conclusionZh:  full.conclusionZh  ?? '',
           conclusionJa:  full.conclusionJa  ?? '',
           conclusionEn:  full.conclusionEn  ?? '',
@@ -485,6 +437,13 @@ export default function AdminPage() {
           })),
           visible: full.visible ?? true,
         });
+        // Load gallery URLs from layouts
+        const layoutRes = await fetch('/api/layouts');
+        if (layoutRes.ok) {
+          const layout = await layoutRes.json();
+          const galleryUrls = layout[`plan.${plan.id}.gallery`] ?? [];
+          setEditorForm((prev) => ({ ...prev, galleryUrls }));
+        }
       }
     } catch { /* use defaults */ }
     setShowPlanEditor(true);
@@ -556,6 +515,16 @@ export default function AdminPage() {
         body: JSON.stringify(budgetPayload),
       });
       if (!budgetRes.ok) { showMessage('error', '予算の保存に失敗しました'); return; }
+
+      // 5. PUT gallery layout
+      const layoutRes2 = await fetch('/api/layouts');
+      const existingLayout = layoutRes2.ok ? await layoutRes2.json() : {};
+      const newLayout = { ...existingLayout, [`plan.${planEditorId}.gallery`]: f.galleryUrls };
+      await fetch('/api/layouts', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLayout),
+      });
 
       // Update local plan list
       const updated: PlanEntry = await planRes.json();
@@ -644,15 +613,7 @@ export default function AdminPage() {
 
   // ─── Layout draft operations ──────────────────────────────────────────────
 
-  /** Assign cover image to a plan (draft) */
-  const draftAssignCover = useCallback((planId: string, imageUrl: string) => {
-    setDraftPlans((prev) => {
-      const source = prev ?? plans;
-      return source.map((p) => p.id === planId ? { ...p, coverImage: imageUrl } : p);
-    });
-  }, [plans]);
-
-  const handleDiscardDraft = () => { setDraftLayout(null); setDraftPlans(null); };
+  const handleDiscardDraft = () => { setDraftLayout(null); };
 
   /** Publish all draft changes to server */
   const handlePublish = async () => {
@@ -666,19 +627,6 @@ export default function AdminPage() {
         if (!res.ok) throw new Error('レイアウトの更新に失敗しました');
         setSavedLayout(draftLayout);
         setDraftLayout(null);
-      }
-      if (draftPlans) {
-        const changed = draftPlans.filter((dp) => plans.find((p) => p.id === dp.id)?.coverImage !== dp.coverImage);
-        const results = await Promise.all(changed.map((dp) =>
-          fetch(`/api/plans/${dp.id}`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ coverImage: dp.coverImage }),
-          })
-        ));
-        const failed = results.filter((r) => !r.ok).length;
-        if (failed > 0) throw new Error(`${failed} 件のプラン更新に失敗しました`);
-        setPlans(draftPlans);
-        setDraftPlans(null);
       }
       setShowPreviewModal(false);
       showMessage('success', '変更を本番に反映しました');
@@ -760,15 +708,6 @@ export default function AdminPage() {
       return updated;
     });
   }, [draggedFile, dragSourceSection, savedLayout]);
-
-  /** Drop image onto a plan cover zone */
-  const handlePlanCoverDrop = useCallback((e: React.DragEvent, planId: string) => {
-    e.preventDefault();
-    const file = draggedFile;
-    setDraggedFile(null); setDragSourceSection(null); setDropTarget(null);
-    if (!file) return;
-    draftAssignCover(planId, file.url);
-  }, [draggedFile, draftAssignCover]);
 
   // ─── Derived ─────────────────────────────────────────────────────────────
 
@@ -993,10 +932,6 @@ export default function AdminPage() {
                   className="bg-gold text-black font-display text-xs uppercase tracking-[0.3em] px-6 py-2.5 hover:bg-gold/80 transition-colors">
                   + 新規作成
                 </button>
-                <button onClick={openAddPlan}
-                  className="border border-white/20 text-white/50 font-display text-xs uppercase tracking-[0.3em] px-4 py-2.5 hover:border-gold/40 hover:text-gold/70 transition-colors">
-                  + Legacy
-                </button>
               </div>
             </div>
             <div className="luxury-card overflow-x-auto">
@@ -1050,12 +985,8 @@ export default function AdminPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => { setActiveTab('layout'); setLayoutPage(`plan-${plan.id}`); }}
-                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/30 hover:border-gold/30 hover:text-gold/70 transition-all">Gallery</button>
                           <button onClick={() => openPlanEditor(plan)}
                             className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-gold/30 text-gold/60 hover:border-gold hover:text-gold transition-all">編集</button>
-                          <button onClick={() => openEditPlan(plan)}
-                            className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold transition-all">Legacy</button>
                           <button onClick={() => handleDeletePlan(plan.id)}
                             className="text-[10px] font-display uppercase tracking-widest px-2 py-1 border border-red-500/20 text-red-400/60 hover:border-red-400/40 hover:text-red-400 transition-all">Delete</button>
                         </div>
@@ -1066,172 +997,6 @@ export default function AdminPage() {
               </table>
             </div>
 
-            {/* Plan Form Modal */}
-            {showPlanForm && (
-              <div className="fixed inset-0 bg-black/80 z-[200] flex items-start justify-center overflow-y-auto py-6 sm:py-12 px-4">
-                <div className="w-full max-w-2xl bg-[#0a0a0a] border border-white/10 p-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="font-display text-gold text-sm uppercase tracking-widest">{editingPlan ? 'Edit Plan' : 'New Plan'}</h2>
-                    <button onClick={() => setShowPlanForm(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
-                  </div>
-                  <div className="space-y-5 text-sm">
-                    {!editingPlan && (
-                      <div>
-                        <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">Plan ID <span className="text-red-400">*</span></label>
-                        <input value={planForm.id}
-                          onChange={(e) => setPlanForm((f) => ({ ...f, id: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                          placeholder="e.g. winter-ski"
-                          className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none" />
-                        <p className="text-white/20 text-[10px] mt-1">Lowercase, hyphens only. Used in URL: /plans/[id]</p>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-1 gap-3">
-                      <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">Title <span className="text-red-400">*</span></label>
-                      {(['zh', 'ja', 'en'] as const).map((l) => (
-                        <div key={l} className="flex gap-2 items-center">
-                          <span className="text-white/20 text-[10px] font-display uppercase w-6">{l}</span>
-                          <input value={planForm[`title${l.charAt(0).toUpperCase() + l.slice(1)}` as 'titleZh']}
-                            onChange={(e) => setPlanForm((f) => ({ ...f, [`title${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value }))}
-                            className="flex-1 bg-white/5 border border-white/10 text-white px-3 py-1.5 focus:border-gold/50 focus:outline-none" />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">Description</label>
-                      {(['zh', 'ja', 'en'] as const).map((l) => (
-                        <div key={l} className="flex gap-2 items-start">
-                          <span className="text-white/20 text-[10px] font-display uppercase w-6 mt-2">{l}</span>
-                          <textarea value={planForm[`desc${l.charAt(0).toUpperCase() + l.slice(1)}` as 'descZh']}
-                            onChange={(e) => setPlanForm((f) => ({ ...f, [`desc${l.charAt(0).toUpperCase() + l.slice(1)}`]: e.target.value }))}
-                            rows={2} className="flex-1 bg-white/5 border border-white/10 text-white px-3 py-1.5 focus:border-gold/50 focus:outline-none resize-none" />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">Duration (days)</label>
-                        <input type="number" min={1} value={planForm.duration}
-                          onChange={(e) => setPlanForm((f) => ({ ...f, duration: Number(e.target.value) }))}
-                          className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none" />
-                      </div>
-                      <div>
-                        <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">Price</label>
-                        <input value={planForm.price}
-                          onChange={(e) => setPlanForm((f) => ({ ...f, price: e.target.value }))}
-                          placeholder="¥30,000"
-                          className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="col-span-3"><label className="text-white/40 text-[10px] uppercase tracking-widest font-display">Badge / Tag (optional)</label></div>
-                      {(['Zh', 'Ja', 'En'] as const).map((l) => (
-                        <div key={l}>
-                          <span className="text-white/20 text-[10px] font-display block mb-1">{l}</span>
-                          <input value={planForm[`tag${l}` as 'tagZh']}
-                            onChange={(e) => setPlanForm((f) => ({ ...f, [`tag${l}`]: e.target.value }))}
-                            className="w-full bg-white/5 border border-white/10 text-white px-2 py-1.5 text-xs focus:border-gold/50 focus:outline-none" />
-                        </div>
-                      ))}
-                    </div>
-                    <div>
-                      <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">Highlights (3 bullet points)</label>
-                      {[0, 1, 2].map((i) => (
-                        <div key={i} className="grid grid-cols-3 gap-2 mb-2">
-                          {(['Zh', 'Ja', 'En'] as const).map((l) => (
-                            <div key={l} className="flex gap-1 items-center">
-                              <span className="text-white/20 text-[10px] font-display w-4">{l}</span>
-                              <input value={planForm[`highlights${l}` as 'highlightsZh'][i] ?? ''}
-                                onChange={(e) => {
-                                  const key = `highlights${l}` as 'highlightsZh';
-                                  const arr = [...planForm[key]]; arr[i] = e.target.value;
-                                  setPlanForm((f) => ({ ...f, [key]: arr }));
-                                }}
-                                className="flex-1 bg-white/5 border border-white/10 text-white px-2 py-1 text-xs focus:border-gold/50 focus:outline-none" />
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                    {/* Cover Image Picker */}
-                    <div>
-                      <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-2">Cover Image</label>
-                      <div className="flex items-center gap-3">
-                        <div className="relative w-24 h-16 overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
-                          {planForm.coverImage
-                            // eslint-disable-next-line @next/next/no-img-element
-                            ? <img src={planForm.coverImage} alt="" className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-white/20 text-[8px] font-display uppercase tracking-widest">No image</span>
-                              </div>
-                          }
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                          <button type="button" onClick={() => setShowImagePicker(true)}
-                            className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-white/20 text-white/50 hover:border-gold/40 hover:text-gold transition-all">
-                            {planForm.coverImage ? '変更' : '選択'}
-                          </button>
-                          {planForm.coverImage && (
-                            <button type="button" onClick={() => setPlanForm((f) => ({ ...f, coverImage: '' }))}
-                              className="text-[10px] font-display uppercase tracking-widest px-3 py-1.5 border border-red-500/20 text-red-400/50 hover:border-red-400/40 hover:text-red-400 transition-all">
-                              削除
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <label className="text-white/40 text-[10px] uppercase tracking-widest font-display">Visible on website</label>
-                      <button onClick={() => setPlanForm((f) => ({ ...f, visible: !f.visible }))}
-                        className={`w-10 h-5 rounded-full transition-all relative ${planForm.visible ? 'bg-gold' : 'bg-white/10'}`}>
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-black transition-all ${planForm.visible ? 'left-5' : 'left-0.5'}`} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-white/10">
-                    <button onClick={() => { setShowPlanForm(false); setShowImagePicker(false); }}
-                      className="px-6 py-2 border border-white/10 text-white/40 hover:text-white font-display text-xs uppercase tracking-widest transition-all">Cancel</button>
-                    <button onClick={handleSavePlan} disabled={planSaving}
-                      className="px-8 py-2 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
-                      {planSaving ? 'Saving...' : editingPlan ? 'Save Changes' : 'Create Plan'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Image Picker Modal */}
-            {showImagePicker && (
-              <div className="fixed inset-0 bg-black/90 z-[300] flex items-start justify-center overflow-y-auto py-6 px-4">
-                <div className="w-full max-w-3xl bg-[#0a0a0a] border border-white/10 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-display text-gold text-sm uppercase tracking-widest">Cover Image を選択</h3>
-                    <button onClick={() => setShowImagePicker(false)} className="text-white/40 hover:text-white text-2xl leading-none">×</button>
-                  </div>
-                  {imageFiles.length === 0
-                    ? <div className="text-white/20 text-sm font-kaiti italic text-center py-12">画像がありません。先に Images タブからアップロードしてください。</div>
-                    : <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-[60vh] overflow-y-auto pr-1">
-                        {imageFiles.map((f) => (
-                          <button key={f.id} type="button"
-                            onClick={() => { setPlanForm((pf) => ({ ...pf, coverImage: f.url })); setShowImagePicker(false); }}
-                            className={`relative aspect-square overflow-hidden border transition-all hover:border-gold/60 ${planForm.coverImage === f.url ? 'border-gold ring-1 ring-gold' : 'border-white/10'}`}
-                            title={f.name}>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={f.url} alt={f.name} className="w-full h-full object-cover" />
-                            {planForm.coverImage === f.url && (
-                              <div className="absolute inset-0 bg-gold/30 flex items-center justify-center">
-                                <span className="text-gold text-xl font-bold">✓</span>
-                              </div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-                              <span className="text-[6px] font-display text-white/40 truncate block">{f.name}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                  }
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1241,11 +1006,9 @@ export default function AdminPage() {
           const urlToFile = (url: string) => files.find((f) => f.url === url);
 
           const pageOptions = [
-            { id: 'home',          label: 'Home',         url: '/' },
-            { id: 'plans-list',    label: 'Plans',        url: '/plans' },
-            { id: 'gallery',       label: 'Gallery',      url: '/library' },
-            { id: 'surroundings',  label: 'Surroundings', url: '/surroundings' },
-            ...layoutPlans.map((p) => ({ id: `plan-${p.id}`, label: p.titleEn || p.id, url: `/plans/${p.id}` })),
+            { id: 'home',         label: 'Home',         url: '/' },
+            { id: 'gallery',      label: 'Gallery',      url: '/library' },
+            { id: 'surroundings', label: 'Surroundings', url: '/surroundings' },
           ];
 
           // ── Inline render helpers ────────────────────────────────────────────
@@ -1328,59 +1091,8 @@ export default function AdminPage() {
             );
           };
 
-          /** Plan cover drop zone */
-          const renderPlanCover = (plan: PlanEntry) => {
-            const key    = `plan-cover-${plan.id}`;
-            const isOver = dropTarget === key;
-            return (
-              <div key={plan.id}
-                onDragOver={(e) => { e.preventDefault(); setDropTarget(key); }}
-                onDragLeave={() => setDropTarget(null)}
-                onDrop={(e) => handlePlanCoverDrop(e, plan.id)}
-                className={`border-2 border-dashed rounded overflow-hidden transition-all duration-200 relative ${
-                  isOver ? 'border-gold bg-gold/10' : 'border-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="relative aspect-[4/3] bg-white/5">
-                  {plan.coverImage
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={plan.coverImage} alt="" className="absolute inset-0 w-full h-full object-cover opacity-70" />
-                    : null}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 p-2">
-                    <span className="text-[9px] font-display uppercase tracking-widest text-white/50 mb-1">
-                      {isOver ? '▼ Drop' : plan.coverImage ? 'Cover' : 'Drop cover image'}
-                    </span>
-                    <span className="text-[10px] font-serif text-white/80 text-center leading-tight">{plan.titleEn}</span>
-                    {!plan.visible && <span className="text-[8px] font-display text-white/30 uppercase mt-1">hidden</span>}
-                  </div>
-                  {plan.coverImage && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); draftAssignCover(plan.id, ''); }}
-                      className="absolute top-1 right-1 w-5 h-5 bg-black/70 border border-white/20 text-white/60 hover:text-red-400 hover:border-red-400/40 rounded-sm text-[10px] leading-none flex items-center justify-center transition-all"
-                      title="カバー画像を削除">×
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          };
-
           /** Render sections for the currently selected page */
           const renderPageSections = () => {
-            if (layoutPage.startsWith('plan-')) {
-              const planId = layoutPage.replace('plan-', '');
-              const plan = layoutPlans.find((p) => p.id === planId);
-              if (!plan) return <div className="text-white/20 text-sm font-kaiti italic text-center py-12">Plan not found.</div>;
-              return (
-                <div className="space-y-4">
-                  <div className="luxury-card p-5">
-                    <h4 className="font-display text-white/60 text-[10px] uppercase tracking-widest mb-3">① Cover Image (top of plan page)</h4>
-                    <div className="max-w-xs">{renderPlanCover(plan)}</div>
-                  </div>
-                  {renderSection(`plan.${planId}.gallery`, '② Plan Photo Gallery', 4)}
-                </div>
-              );
-            }
             switch (layoutPage) {
               case 'home': return (
                 <div className="space-y-4">
@@ -1435,21 +1147,20 @@ export default function AdminPage() {
                   {/* Plans preview */}
                   <div className="luxury-card p-5">
                     <h4 className="font-display text-white/60 text-[10px] uppercase tracking-widest mb-3">③ Plans Preview (最初の3プランを表示)</h4>
-                    {layoutPlans.filter((p) => p.visible).length === 0
-                      ? <div className="text-white/20 text-xs font-kaiti italic text-center py-6">No visible plans</div>
-                      : <div className="grid grid-cols-3 gap-3">{layoutPlans.filter((p) => p.visible).slice(0, 3).map((p) => renderPlanCover(p))}</div>
-                    }
+                    <p className="text-white/20 text-[9px] font-display">カバー画像は Plans タブ → 編集 で設定してください</p>
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      {plans.filter((p) => p.visible).slice(0, 3).map((p) => (
+                        <div key={p.id} className="relative aspect-[4/3] overflow-hidden border border-white/10 bg-white/5">
+                          {p.coverImage
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={p.coverImage} alt="" className="w-full h-full object-cover opacity-70" />
+                            : <div className="w-full h-full flex items-center justify-center"><span className="text-white/20 text-[8px] font-display uppercase">{p.titleEn || p.id}</span></div>
+                          }
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {renderSection('home.surroundings', '④ Surroundings Preview (4タイル)', 4)}
-                </div>
-              );
-              case 'plans-list': return (
-                <div className="luxury-card p-5">
-                  <h4 className="font-display text-white/60 text-[10px] uppercase tracking-widest mb-3">Plan card cover images (all plans)</h4>
-                  {layoutPlans.length === 0
-                    ? <div className="text-white/20 text-xs font-kaiti italic text-center py-6">No plans</div>
-                    : <div className="grid grid-cols-2 md:grid-cols-3 gap-3">{layoutPlans.map((p) => renderPlanCover(p))}</div>
-                  }
                 </div>
               );
               case 'gallery': return (
@@ -1530,7 +1241,7 @@ export default function AdminPage() {
                         ? <div className="col-span-3 text-white/20 text-xs font-kaiti italic text-center py-6">No images</div>
                         : imageFiles.map((f) => {
                           const isPlaced = Object.values(currentLayout).some((urls) => urls.includes(f.url))
-                                         || (draftPlans ?? plans).some((p) => p.coverImage === f.url);
+                                         || plans.some((p) => p.coverImage === f.url);
                           return (
                             <div key={f.id}
                               draggable
@@ -2152,12 +1863,6 @@ export default function AdminPage() {
                   </div>
                 );
               })}
-              {draftPlans && draftPlans.filter((dp) => plans.find((p) => p.id === dp.id)?.coverImage !== dp.coverImage).map((dp) => (
-                <div key={dp.id} className="flex items-start gap-2 text-sm">
-                  <span className="text-gold/60 font-display text-[9px] uppercase tracking-widest w-36 flex-shrink-0 mt-0.5">Plan Cover</span>
-                  <span className="text-white/50 text-[11px] font-kaiti">{dp.titleEn || dp.id}</span>
-                </div>
-              ))}
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
               <button onClick={() => setShowPublishConfirm(false)}
