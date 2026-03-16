@@ -181,7 +181,7 @@ export default function AdminPage() {
 
   // ── Image metadata editing ──
   const [editingMetaFile, setEditingMetaFile] = useState<MediaFile | null>(null);
-  const [metaForm, setMetaForm]               = useState({ name: '' });
+  const [metaForm, setMetaForm]               = useState({ name: '', category: '' });
   const [metaSaving, setMetaSaving]           = useState(false);
 
   // ── Toast ──
@@ -597,11 +597,11 @@ export default function AdminPage() {
       const res = await fetch(`/api/media/${editingMetaFile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: metaForm.name }),
+        body: JSON.stringify({ name: metaForm.name, category: metaForm.category }),
       });
       if (res.ok) {
         const updated: MediaFile = await res.json();
-        setFiles((prev) => prev.map((f) => f.id === updated.id ? { ...f, name: updated.name ?? metaForm.name } : f));
+        setFiles((prev) => prev.map((f) => f.id === updated.id ? { ...f, name: updated.name ?? metaForm.name, category: updated.category ?? metaForm.category } : f));
         setEditingMetaFile(null);
         showMessage('success', 'ファイル名を更新しました');
       } else {
@@ -882,7 +882,7 @@ export default function AdminPage() {
                         <td className="p-4 text-white/80 text-sm max-w-[180px]">
                           <div className="flex items-center gap-1 group/name">
                             <span className="truncate">{file.name}</span>
-                            <button onClick={() => { setEditingMetaFile(file); setMetaForm({ name: file.name }); }}
+                            <button onClick={() => { setEditingMetaFile(file); setMetaForm({ name: file.name, category: file.category }); }}
                               className="flex-shrink-0 opacity-0 group-hover/name:opacity-100 text-white/30 hover:text-gold transition-all"
                               title="名前を編集">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1892,11 +1892,23 @@ export default function AdminPage() {
               <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1">表示名 / Alt Text</label>
               <input
                 value={metaForm.name}
-                onChange={(e) => setMetaForm({ name: e.target.value })}
+                onChange={(e) => setMetaForm((prev) => ({ ...prev, name: e.target.value }))}
                 className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none text-sm"
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSaveMeta(); if (e.key === 'Escape') setEditingMetaFile(null); }}
               />
               <p className="text-white/20 text-[10px] mt-1 font-display">画像のalt属性および管理画面での表示名に使用されます</p>
+              <label className="block text-white/40 text-[10px] uppercase tracking-widest font-display mb-1 mt-4">カテゴリ</label>
+              <select
+                value={metaForm.category}
+                onChange={(e) => setMetaForm((prev) => ({ ...prev, category: e.target.value }))}
+                className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:border-gold/50 focus:outline-none text-sm">
+                <option value="uncategorized">uncategorized</option>
+                <option value="hotel">hotel</option>
+                <option value="surroundings">surroundings</option>
+                {plans.map((p) => (
+                  <option key={p.id} value={`plan-${p.id}`}>plan-{p.id}</option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
               <button onClick={() => setEditingMetaFile(null)}
