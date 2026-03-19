@@ -49,16 +49,10 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- AWS SDK S3 -->
+        <!-- AWS SDK S3 (S3Presigner is included in this module) -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>s3</artifactId>
-            <version>${aws.sdk.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>software.amazon.awssdk</groupId>
-            <artifactId>s3-presigner</artifactId>
             <version>${aws.sdk.version}</version>
         </dependency>
 
