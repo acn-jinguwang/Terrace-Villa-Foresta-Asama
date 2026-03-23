@@ -9,6 +9,14 @@ export function GET(request: NextRequest) {
   });
   return NextResponse.json({
     url: request.url,
+    nextUrl: {
+      href: request.nextUrl.href,
+      pathname: request.nextUrl.pathname,
+      host: request.nextUrl.host,
+      hostname: request.nextUrl.hostname,
+      protocol: request.nextUrl.protocol,
+      search: request.nextUrl.search,
+    },
     method: request.method,
     headers,
   });
