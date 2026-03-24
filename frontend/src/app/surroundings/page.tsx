@@ -273,11 +273,13 @@ export default function SurroundingsPage() {
             {filtered.map((spot) => {
               const spotIdx = spots.indexOf(spot);
               const spotImage = spotImageUrls[spotIdx] ?? spot.image;
+              const hasValidImage = !imageErrors[spot.id] &&
+                (spotImage.startsWith('http') || spotImage.startsWith('/uploads'));
               return (
               <div key={spot.id} className="luxury-card group overflow-hidden">
                 {/* Image */}
                 <div className="relative aspect-[4/3] overflow-hidden bg-white/5">
-                  {!imageErrors[spot.id] ? (
+                  {hasValidImage ? (
                     <Image
                       src={spotImage}
                       alt={spot.name[lang]}
