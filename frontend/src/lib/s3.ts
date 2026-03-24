@@ -10,6 +10,14 @@ export function s3Url(key: string): string {
   return `https://${CDN}/${key}`;
 }
 
+// Convert old direct S3 URLs (any bucket) to CloudFront URLs
+export function normalizeUrl(url: string): string {
+  if (!url) return url;
+  const match = url.match(/^https?:\/\/[^/]+\.amazonaws\.com\/(uploads\/.+)$/);
+  if (match) return `https://${CDN}/${match[1]}`;
+  return url;
+}
+
 export async function putS3(
   key: string,
   body: Buffer,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb, runMigration, seedSurroundingsIfEmpty } from '@/lib/db';
+import { normalizeUrl } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
 const NO_CACHE = { 'Cache-Control': 'no-store' };
@@ -15,7 +16,7 @@ function rowToSpot(r: any) {
     descriptionJa: r.description_ja ?? '',
     descriptionEn: r.description_en ?? '',
     distance:      r.distance      ?? 0,
-    imageUrl:      r.image_url     ?? '',
+    imageUrl:      normalizeUrl(r.image_url ?? ''),
     tagsZh:        r.tags_zh       ?? [],
     tagsJa:        r.tags_ja       ?? [],
     tagsEn:        r.tags_en       ?? [],

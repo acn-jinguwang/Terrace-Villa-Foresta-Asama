@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { normalizeUrl } from '@/lib/s3';
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     return NextResponse.json(rows.map((r: any) => ({
       id:         r.id,
       name:       r.name,
-      url:        r.url,
+      url:        normalizeUrl(r.url ?? ''),
       type:       r.type,
       category:   r.category,
       size:       r.size,
