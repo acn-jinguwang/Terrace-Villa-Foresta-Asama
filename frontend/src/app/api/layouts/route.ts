@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { normalizeUrl } from '@/lib/s3';
 
 const DEFAULT_LAYOUTS: Record<string, string[]> = {
   'home.hero':            [],
@@ -18,8 +19,8 @@ export async function GET() {
     const [rows] = await db.query('SELECT section_key, image_urls FROM page_layouts') as any[][];
     const layouts = { ...DEFAULT_LAYOUTS };
     for (const r of rows) {
-      const urls = typeof r.image_urls === 'string' ? JSON.parse(r.image_urls) : r.image_urls;
-      layouts[r.section_key] = urls;
+      const urls: string[] = typeof r.image_urls === 'string' ? JSON.parse(r.image_urls) : r.image_urls;
+      layouts[r.section_key] = urls.map(normalizeUrl);
     }
     return NextResponse.json(layouts, { headers: NO_CACHE });
   } catch (err) {

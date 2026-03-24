@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { normalizeUrl } from '@/lib/s3';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
@@ -32,7 +33,7 @@ export async function GET(
       descriptionZh: r.description_zh  ?? '',
       descriptionJa: r.description_ja  ?? '',
       descriptionEn: r.description_en  ?? '',
-      imageUrl:      r.image_url       ?? '',
+      imageUrl:      normalizeUrl(r.image_url ?? ''),
     }));
     return NextResponse.json(data, { headers: NO_STORE });
   } catch (err) {

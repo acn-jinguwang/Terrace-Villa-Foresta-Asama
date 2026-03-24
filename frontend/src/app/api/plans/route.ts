@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { normalizeUrl } from '@/lib/s3';
 
 export interface PlanEntry {
   id: string;
@@ -26,7 +27,7 @@ export function rowToPlan(r: any): PlanEntry {
     highlightsZh: j(r.highlights_zh),
     highlightsJa: j(r.highlights_ja),
     highlightsEn: j(r.highlights_en),
-    coverImage:   r.cover_image,
+    coverImage:   normalizeUrl(r.cover_image ?? ''),
     visible:      r.visible === 1,
     createdAt:    r.created_at,
   };
