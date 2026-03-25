@@ -387,8 +387,12 @@ export default function HomePage() {
                 ref={videoRef}
                 key={videoSrc}
                 className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
                 controls
-                preload="metadata"
+                preload="auto"
               >
                 <source src={videoSrc} type="video/mp4" />
                 <source src={videoSrc} type="video/webm" />
