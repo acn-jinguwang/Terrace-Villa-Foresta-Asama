@@ -16,6 +16,9 @@ interface PlanEntry {
   highlightsZh: string[]; highlightsJa: string[]; highlightsEn: string[];
   coverImage: string;
   visible: boolean;
+  budgetTotalZh: string | null;
+  budgetTotalJa: string | null;
+  budgetTotalEn: string | null;
 }
 
 export default function PlansPage() {
@@ -37,6 +40,8 @@ export default function PlansPage() {
   const getDesc  = (p: PlanEntry) => lang === 'zh' ? p.descZh  : lang === 'ja' ? p.descJa  : p.descEn;
   const getTag   = (p: PlanEntry) => lang === 'zh' ? p.tagZh   : lang === 'ja' ? p.tagJa   : p.tagEn;
   const getHighlights = (p: PlanEntry) => lang === 'zh' ? p.highlightsZh : lang === 'ja' ? p.highlightsJa : p.highlightsEn;
+  const getTotal = (p: PlanEntry) =>
+    (lang === 'zh' ? p.budgetTotalZh : lang === 'ja' ? p.budgetTotalJa : p.budgetTotalEn) ?? p.price;
 
   // Fallback cover image path (static files if no uploaded cover)
   const coverSrc = (p: PlanEntry) => p.coverImage || `/images/plans/${p.id}.jpg`;
@@ -125,7 +130,7 @@ export default function PlansPage() {
                           <div className="text-white/30 text-[10px] uppercase tracking-widest font-display mb-0.5">
                             {t(translations.plans.price_from)}
                           </div>
-                          <div className="text-gold font-display font-bold text-lg">{plan.price}</div>
+                          <div className="text-gold font-display font-bold text-lg">{getTotal(plan)}</div>
                           <div className="text-white/30 text-[10px] uppercase tracking-widest font-display">
                             {t(translations.plans.per_person)}
                           </div>

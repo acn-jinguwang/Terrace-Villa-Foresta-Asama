@@ -13,9 +13,28 @@ export interface PlanEntry {
   coverImage: string;
   visible: boolean;
   createdAt: string;
+  budgetTotalZh: string | null;
+  budgetTotalJa: string | null;
+  budgetTotalEn: string | null;
 }
 
-export function rowToPlan(r: any): PlanEntry {
+const CURRENCY_SYMBOL: Record<string, string> = { CNY: '¥', JPY: '¥', USD: '$' };
+const DEFAULT_CURRENCY: Record<string, string> = { zh: 'CNY', ja: 'JPY', en: 'USD' };
+
+function calcBudgetTotal(items: any[], lang: 'zh' | 'ja' | 'en'): string | null {
+  let total = 0; let hasAny = false; let currency = '';
+  for (const item of items) {
+    const amount = (item[`amount_${lang}`] ?? '').replace(/[,¥$￥]/g, '');
+    const cur = item[`currency_${lang}`] || DEFAULT_CURRENCY[lang];
+    const num = parseFloat(amount);
+    if (!isNaN(num) && num > 0) { total += num; hasAny = true; currency = cur; }
+  }
+  if (!hasAny) return null;
+  const sym = CURRENCY_SYMBOL[currency] ?? '';
+  return `${currency} ${sym}${total.toLocaleString()}`;
+}
+
+export function rowToPlan(r: any, budgetItems?: any[]): PlanEntry {
   const j = (v: any) => (typeof v === 'string' ? JSON.parse(v) : v) ?? [];
   return {
     id:           r.id,
@@ -30,6 +49,9 @@ export function rowToPlan(r: any): PlanEntry {
     coverImage:   normalizeUrl(r.cover_image ?? ''),
     visible:      r.visible === 1,
     createdAt:    r.created_at,
+    budgetTotalZh: budgetItems ? calcBudgetTotal(budgetItems, 'zh') : null,
+    budgetTotalJa: budgetItems ? calcBudgetTotal(budgetItems, 'ja') : null,
+    budgetTotalEn: budgetItems ? calcBudgetTotal(budgetItems, 'en') : null,
   };
 }
 
@@ -41,8 +63,15 @@ export async function GET(request: Request) {
     const sql = isPublic
       ? 'SELECT * FROM plans WHERE visible = 1 ORDER BY sort_order ASC, created_at ASC'
       : 'SELECT * FROM plans ORDER BY sort_order ASC, created_at ASC';
-    const [rows] = await db.query(sql) as any[][];
-    return NextResponse.json(rows.map(rowToPlan));
+    const [[rows], [budgetRows]] = await Promise.all([
+      db.query(sql) as Promise<any[][]>,
+      db.query('SELECT plan_id, amount_zh, currency_zh, amount_ja, currency_ja, amount_en, currency_en FROM plan_budget_items') as Promise<any[][]>,
+    ]);
+    const budgetByPlan: Record<string, any[]> = {};
+    for (const b of budgetRows) {
+      (budgetByPlan[b.plan_id] ??= []).push(b);
+    }
+    return NextResponse.json(rows.map((r) => rowToPlan(r, budgetByPlan[r.id] ?? [])));
   } catch (err) {
     console.error('[plans GET]', err);
     return NextResponse.json([]);
@@ -61,7 +90,7 @@ export async function PATCH(request: Request) {
       db.query('UPDATE plans SET sort_order = ? WHERE id = ?', [idx, id]),
     ));
     const [rows] = await db.query('SELECT * FROM plans ORDER BY sort_order ASC') as any[][];
-    return NextResponse.json(rows.map(rowToPlan));
+    return NextResponse.json(rows.map((r) => rowToPlan(r)));
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

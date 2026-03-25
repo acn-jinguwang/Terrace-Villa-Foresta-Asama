@@ -22,6 +22,9 @@ interface PlanEntry {
   tagZh: string; tagJa: string; tagEn: string;
   coverImage: string;
   visible: boolean;
+  budgetTotalZh: string | null;
+  budgetTotalJa: string | null;
+  budgetTotalEn: string | null;
 }
 
 // Placeholder gradient backgrounds shown when no images are uploaded yet
@@ -156,6 +159,9 @@ export default function HomePage() {
 
   const getPlanTag = (p: PlanEntry) =>
     lang === 'zh' ? p.tagZh : lang === 'ja' ? p.tagJa : p.tagEn;
+
+  const getPlanTotal = (p: PlanEntry) =>
+    (lang === 'zh' ? p.budgetTotalZh : lang === 'ja' ? p.budgetTotalJa : p.budgetTotalEn) ?? p.price;
 
   const slides = heroImages.length > 0 ? heroImages : heroGradients.map((g, i) => ({ id: `p${i}`, gradient: g }));
 
@@ -465,7 +471,7 @@ export default function HomePage() {
                     </h3>
                     <div className="flex items-center justify-between mt-4">
                       <span className="text-gold font-display text-sm font-bold">
-                        {plan.price}{' '}
+                        {getPlanTotal(plan)}{' '}
                         <span className="text-white/40 text-[10px]">{t(translations.plans.per_person)}</span>
                       </span>
                       <span className="text-white/40 text-xs font-display uppercase tracking-widest group-hover:text-gold transition-colors duration-300">
