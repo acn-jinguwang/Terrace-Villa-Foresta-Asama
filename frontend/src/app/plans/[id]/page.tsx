@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
+import ContactModal from '@/components/ContactModal';
 
 type Lang = 'zh' | 'ja' | 'en';
 
@@ -111,6 +112,7 @@ export default function PlanDetailPage() {
   const [galleryPhotos, setGalleryPhotos] = useState<string[]>([]);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
+  const [contactOpen, setContactOpen] = useState(false);
 
   const planId = params.id as string;
 
@@ -167,6 +169,7 @@ export default function PlanDetailPage() {
   );
 
   return (
+    <>
     <div className="min-h-screen bg-dark pt-20">
 
       {/* ── Section 1: Hero ── */}
@@ -457,11 +460,14 @@ export default function PlanDetailPage() {
           <Link href="/plans" className="luxury-btn-outline">
             ← Back
           </Link>
-          <button className="luxury-btn">
+          <button className="luxury-btn" onClick={() => setContactOpen(true)}>
             Contact Us
           </button>
         </div>
       </div>
     </div>
+
+      {contactOpen && <ContactModal onClose={() => setContactOpen(false)} />}
+    </>
   );
 }
