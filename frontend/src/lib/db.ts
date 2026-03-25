@@ -188,6 +188,45 @@ export async function runMigration(): Promise<void> {
     }
   }
 
+  // One-time: rewrite old direct S3 URLs → CloudFront URLs in all tables
+  const cdn = process.env.CDN_DOMAIN || 'd143jkdkye8i79.cloudfront.net';
+  const cdnBase = `https://${cdn}`;
+  const s3Like = '%amazonaws.com%';
+
+  // Simple VARCHAR columns
+  for (const [tbl, col] of [
+    ['media',              'url'],
+    ['surroundings_spots', 'image_url'],
+    ['plan_highlights',    'image_url'],
+    ['contact_info',       'line_qr_url'],
+    ['contact_info',       'wechat_qr_url'],
+    ['plans',              'cover_image'],
+  ] as [string, string][]) {
+    await db.query(
+      `UPDATE ${tbl} SET ${col} = CONCAT(?, '/', SUBSTRING_INDEX(${col}, 'amazonaws.com/', -1)) WHERE ${col} LIKE ?`,
+      [cdnBase, s3Like],
+    ).catch(() => {});
+  }
+
+  // JSON array columns: page_layouts.image_urls and plans.accommodation_images
+  const [layouts] = await db.query('SELECT section_key, image_urls FROM page_layouts').catch(() => [[]] as any) as any[][];
+  for (const row of layouts as any[]) {
+    const urls: string[] = typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : (row.image_urls ?? []);
+    const fixed = urls.map((u: string) => u.includes('amazonaws.com') ? `${cdnBase}/${u.split('amazonaws.com/').pop()}` : u);
+    if (fixed.some((u, i) => u !== urls[i])) {
+      await db.query('UPDATE page_layouts SET image_urls = ? WHERE section_key = ?', [JSON.stringify(fixed), row.section_key]).catch(() => {});
+    }
+  }
+  const [plans] = await db.query('SELECT id, accommodation_images FROM plans WHERE accommodation_images IS NOT NULL').catch(() => [[]] as any) as any[][];
+  for (const row of plans as any[]) {
+    if (!row.accommodation_images) continue;
+    const imgs: string[] = typeof row.accommodation_images === 'string' ? JSON.parse(row.accommodation_images) : row.accommodation_images;
+    const fixed = imgs.map((u: string) => u.includes('amazonaws.com') ? `${cdnBase}/${u.split('amazonaws.com/').pop()}` : u);
+    if (fixed.some((u, i) => u !== imgs[i])) {
+      await db.query('UPDATE plans SET accommodation_images = ? WHERE id = ?', [JSON.stringify(fixed), row.id]).catch(() => {});
+    }
+  }
+
   console.log('[db] migration complete');
 }
 
