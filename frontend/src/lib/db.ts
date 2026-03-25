@@ -186,6 +186,14 @@ export async function runMigration(): Promise<void> {
     }
   }
 
+  // Migrate old `amount` column data → new per-language columns (one-time, idempotent)
+  await db.query(`
+    UPDATE plan_budget_items
+    SET amount_zh = amount, amount_ja = amount, amount_en = amount
+    WHERE amount IS NOT NULL AND amount != ''
+      AND (amount_zh IS NULL OR amount_zh = '')
+  `).catch(() => {});
+
   // Extend plans table with new columns — MySQL 5.7 compatible (no ADD COLUMN IF NOT EXISTS)
   const newColumns: [string, string][] = [
     ['prestige_zh',           'TEXT'],
