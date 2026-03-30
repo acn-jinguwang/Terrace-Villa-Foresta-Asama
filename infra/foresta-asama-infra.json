@@ -283,6 +283,10 @@
               {
                 "Name": "NEXT_PUBLIC_API_URL",
                 "Value": "/api"
+              },
+              {
+                "Name": "CDN_DOMAIN",
+                "Value": "d143jkdkye8i79.cloudfront.net"
               }
             ],
             "Secrets": [
