@@ -104,6 +104,7 @@ export default function PlanDetailPage() {
   const params = useParams();
   const pathname = usePathname();
   const base = pathname.startsWith('/test') ? '/test' : '';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
   const { t, language } = useLanguage();
   const lang = language as Lang;
 
@@ -125,8 +126,8 @@ export default function PlanDetailPage() {
       setNotFound(false);
       try {
         const [planRes, layoutRes] = await Promise.all([
-          fetch(`/api/plans/${planId}`),
-          fetch('/api/layouts'),
+          fetch(apiBase + `/plans/${planId}`),
+          fetch(apiBase + '/layouts'),
         ]);
         if (!planRes.ok) { setNotFound(true); setLoading(false); return; }
         const planData: FullPlan = await planRes.json();

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 const NO_CACHE = { 'Cache-Control': 'no-store' };
@@ -11,7 +11,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     if ('visible' in body) {
       await db.query(
         'UPDATE surroundings_spots SET visible=? WHERE id=?',
@@ -37,7 +37,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await db.query('DELETE FROM surroundings_spots WHERE id=?', [id]);
     return NextResponse.json({ ok: true }, { headers: NO_CACHE });
   } catch (err) {

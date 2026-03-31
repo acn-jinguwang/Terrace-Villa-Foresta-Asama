@@ -1,10 +1,15 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
-const REGION = process.env.AWS_REGION || 'ap-northeast-1';
-const BUCKET  = process.env.S3_BUCKET  || 'terrace-villa-foresta-asama-prod';
-const CDN     = process.env.CDN_DOMAIN  || 'd143jkdkye8i79.cloudfront.net';
+const REGION      = process.env.AWS_REGION   || 'ap-northeast-1';
+const PROD_BUCKET = process.env.S3_BUCKET    || 'terrace-villa-foresta-asama-prod';
+const TEST_BUCKET = process.env.S3_BUCKET_TEST || 'terrace-villa-foresta-asama-test';
+const CDN         = process.env.CDN_DOMAIN   || 'd143jkdkye8i79.cloudfront.net';
 
 const client = new S3Client({ region: REGION });
+
+function getBucket(isTest = false): string {
+  return isTest ? TEST_BUCKET : PROD_BUCKET;
+}
 
 export function s3Url(key: string): string {
   return `https://${CDN}/${key}`;
@@ -22,13 +27,14 @@ export async function putS3(
   key: string,
   body: Buffer,
   contentType: string,
+  isTest = false,
 ): Promise<string> {
   await client.send(
-    new PutObjectCommand({ Bucket: BUCKET, Key: key, Body: body, ContentType: contentType }),
+    new PutObjectCommand({ Bucket: getBucket(isTest), Key: key, Body: body, ContentType: contentType }),
   );
   return s3Url(key);
 }
 
-export async function deleteS3(key: string): Promise<void> {
-  await client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+export async function deleteS3(key: string, isTest = false): Promise<void> {
+  await client.send(new DeleteObjectCommand({ Bucket: getBucket(isTest), Key: key }));
 }

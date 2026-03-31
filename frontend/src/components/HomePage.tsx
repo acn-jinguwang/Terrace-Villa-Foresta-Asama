@@ -107,6 +107,7 @@ export default function HomePage() {
   const lang = language as 'zh' | 'ja' | 'en';
   const pathname = usePathname();
   const base = pathname.startsWith('/test') ? '/test' : '';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
   const [currentSlide, setCurrentSlide] = useState(0);
   const [heroImages, setHeroImages]     = useState<MediaItem[]>([]);
   const [hotelImages, setHotelImages]   = useState<MediaItem[]>([]);
@@ -120,10 +121,10 @@ export default function HomePage() {
     const load = async () => {
       try {
         const [layoutRes, allImgRes, videoRes, plansRes] = await Promise.all([
-          fetch('/api/layouts'),
-          fetch('/api/media/images'),
-          fetch('/api/media/videos'),
-          fetch('/api/plans?public=1'),
+          fetch(apiBase + '/layouts'),
+          fetch(apiBase + '/media/images'),
+          fetch(apiBase + '/media/videos'),
+          fetch(apiBase + '/plans?public=1'),
         ]);
         const layout: Record<string, string[]> = layoutRes.ok ? await layoutRes.json() : {};
         const allImgs: MediaItem[]  = allImgRes.ok ? await allImgRes.json() : [];

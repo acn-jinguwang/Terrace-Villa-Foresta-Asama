@@ -137,6 +137,7 @@ export default function AdminPage() {
   const router = useRouter();
   const pathname = usePathname();
   const adminBase = pathname.startsWith('/test') ? '/test/admin' : '/admin';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
 
   // ── Media state ──
   const [activeTab, setActiveTab]       = useState<Tab>('images');
@@ -252,7 +253,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch(apiBase + '/auth/logout', { method: 'POST' });
     router.push(adminBase + '/login');
   };
 
@@ -261,7 +262,7 @@ export default function AdminPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [imgRes, vidRes] = await Promise.all([fetch('/api/media/images'), fetch('/api/media/videos')]);
+        const [imgRes, vidRes] = await Promise.all([fetch(apiBase + '/media/images'), fetch(apiBase + '/media/videos')]);
         const imgs: MediaFile[] = imgRes.ok ? await imgRes.json() : [];
         const vids: MediaFile[] = vidRes.ok ? await vidRes.json() : [];
         setFiles([...imgs, ...vids]);
@@ -273,7 +274,7 @@ export default function AdminPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/plans');
+        const res = await fetch(apiBase + '/plans');
         setPlans(res.ok ? await res.json() : []);
       } catch { setPlans([]); }
       finally { setPlansLoading(false); }
@@ -283,7 +284,7 @@ export default function AdminPage() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/layouts');
+        const res = await fetch(apiBase + '/layouts');
         if (res.ok) setSavedLayout({ ...DEFAULT_LAYOUTS, ...await res.json() });
       } catch { /* use defaults */ }
     })();
@@ -293,7 +294,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab !== 'surroundings') return;
     setSurroundingLoading(true);
-    fetch('/api/surroundings?admin=1')
+    fetch(apiBase + '/surroundings?admin=1')
       .then((r) => r.ok ? r.json() : [])
       .then((d) => setSurroundingSpots(d))
       .catch(() => {})
@@ -304,7 +305,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab !== 'contact') return;
     setContactLoading(true);
-    fetch('/api/contact')
+    fetch(apiBase + '/contact')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d) setContactForm(d); })
       .catch(() => {})
@@ -320,7 +321,7 @@ export default function AdminPage() {
       const formData = new FormData();
       filesToUpload.forEach((f) => formData.append('files', f));
       formData.append('category', activeTab === 'videos' ? 'videos' : 'uncategorized');
-      const res = await fetch('/api/media/upload', { method: 'POST', body: formData });
+      const res = await fetch(apiBase + '/media/upload', { method: 'POST', body: formData });
       if (res.ok) {
         const newEntries: MediaFile[] = await res.json();
         setFiles((prev) => [...newEntries, ...prev]);
@@ -415,7 +416,7 @@ export default function AdminPage() {
     [newPlans[index], newPlans[target]] = [newPlans[target], newPlans[index]];
     setPlans(newPlans);
     try {
-      await fetch('/api/plans', {
+      await fetch(apiBase + '/plans', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order: newPlans.map((p) => p.id) }),
       });
@@ -510,7 +511,7 @@ export default function AdminPage() {
           visible: full.visible ?? true,
         });
         // Load gallery URLs from layouts
-        const layoutRes = await fetch('/api/layouts');
+        const layoutRes = await fetch(apiBase + '/layouts');
         if (layoutRes.ok) {
           const layout = await layoutRes.json();
           const galleryUrls = layout[`plan.${plan.id}.gallery`] ?? [];
@@ -596,10 +597,10 @@ export default function AdminPage() {
       if (!budgetRes.ok) { showEditorMsg('error', '予算の保存に失敗しました'); return; }
 
       // 5. PUT gallery layout
-      const layoutRes2 = await fetch('/api/layouts');
+      const layoutRes2 = await fetch(apiBase + '/layouts');
       const existingLayout = layoutRes2.ok ? await layoutRes2.json() : {};
       const newLayout = { ...existingLayout, [`plan.${planEditorId}.gallery`]: f.galleryUrls };
-      await fetch('/api/layouts', {
+      await fetch(apiBase + '/layouts', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newLayout),
@@ -621,7 +622,7 @@ export default function AdminPage() {
     if (!id) { showMessage('error', 'Plan ID を入力してください'); return; }
     setNewPlanCreating(true);
     try {
-      const res = await fetch('/api/plans', {
+      const res = await fetch(apiBase + '/plans', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, titleZh: id }),
@@ -699,7 +700,7 @@ export default function AdminPage() {
     setIsPublishing(true);
     try {
       if (draftLayout) {
-        const res = await fetch('/api/layouts', {
+        const res = await fetch(apiBase + '/layouts', {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(draftLayout),
         });
@@ -2281,13 +2282,13 @@ export default function AdminPage() {
             }
             setSurroundingSaving(true);
             try {
-              const res = await fetch('/api/surroundings', {
+              const res = await fetch(apiBase + '/surroundings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(surroundingForm),
               });
               if (res.ok) {
-                const refreshed = await fetch('/api/surroundings?admin=1').then((r) => r.json());
+                const refreshed = await fetch(apiBase + '/surroundings?admin=1').then((r) => r.json());
                 setSurroundingSpots(refreshed);
                 setSurroundingEditId(null);
                 setMessage({ type: 'success', text: 'Saved.' });
@@ -2624,7 +2625,7 @@ export default function AdminPage() {
           const handleContactSave = async () => {
             setContactSaving(true);
             try {
-              const res = await fetch('/api/contact', {
+              const res = await fetch(apiBase + '/contact', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(contactForm),

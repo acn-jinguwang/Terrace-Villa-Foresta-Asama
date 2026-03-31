@@ -1,28 +1,38 @@
 import mysql from 'mysql2/promise';
 
-let pool: mysql.Pool | undefined;
+let prodPool: mysql.Pool | undefined;
+let testPool: mysql.Pool | undefined;
 
-export function getDb(): mysql.Pool {
-  if (!pool) {
-    pool = mysql.createPool({
-      host:                 process.env.DB_HOST     || 'localhost',
-      port:                 Number(process.env.DB_PORT || 3306),
-      user:                 process.env.DB_USER     || 'root',
-      password:             process.env.DB_PASS     || '',
-      database:             process.env.TEST_MODE === 'true'
-                              ? 'foresta_asama_test'
-                              : (process.env.DB_NAME || 'foresta_asama'),
-      waitForConnections:   true,
-      connectionLimit:      5,
-      charset:              'utf8mb4',
-      connectTimeout:       5000,
-      enableKeepAlive:      true,
-      keepAliveInitialDelay: 10000,
-      // RDS requires SSL; disable for local MySQL by omitting DB_SSL
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
-    });
+function createPool(database: string): mysql.Pool {
+  return mysql.createPool({
+    host:                  process.env.DB_HOST     || 'localhost',
+    port:                  Number(process.env.DB_PORT || 3306),
+    user:                  process.env.DB_USER     || 'root',
+    password:              process.env.DB_PASS     || '',
+    database,
+    waitForConnections:    true,
+    connectionLimit:       5,
+    charset:               'utf8mb4',
+    connectTimeout:        5000,
+    enableKeepAlive:       true,
+    keepAliveInitialDelay: 10000,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+  });
+}
+
+/** x-test-mode ヘッダーが付いているリクエストかどうか判定 */
+export function isTestReq(req: Request): boolean {
+  return req.headers.get('x-test-mode') === 'true';
+}
+
+/** isTest=true のとき foresta_asama_test スキーマを使用 */
+export function getDb(isTest = false): mysql.Pool {
+  if (isTest) {
+    testPool ??= createPool('foresta_asama_test');
+    return testPool;
   }
-  return pool;
+  prodPool ??= createPool(process.env.DB_NAME || 'foresta_asama');
+  return prodPool;
 }
 
 export async function runMigration(): Promise<void> {

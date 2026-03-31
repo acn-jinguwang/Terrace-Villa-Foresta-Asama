@@ -17,10 +17,11 @@ export default function Footer() {
   const { t } = useLanguage();
   const pathname = usePathname();
   const base = pathname.startsWith('/test') ? '/test' : '';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
   const [contact, setContact] = useState<ContactInfo | null>(null);
 
   useEffect(() => {
-    fetch('/api/contact')
+    fetch(apiBase + '/contact')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => setContact(d))
       .catch(() => {});

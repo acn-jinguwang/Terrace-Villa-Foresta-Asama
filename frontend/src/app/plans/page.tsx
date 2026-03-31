@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
 
@@ -24,12 +25,14 @@ interface PlanEntry {
 export default function PlansPage() {
   const { t, language } = useLanguage();
   const lang = language as 'zh' | 'ja' | 'en';
+  const pathname = usePathname();
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
   const [plans, setPlans]       = useState<PlanEntry[]>([]);
   const [loading, setLoading]   = useState(true);
   const [imgErrors, setImgErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetch('/api/plans?public=1')
+    fetch(apiBase + '/plans?public=1')
       .then((r) => r.ok ? r.json() : [])
       .then((data: PlanEntry[]) => setPlans(data))
       .catch(() => setPlans([]))

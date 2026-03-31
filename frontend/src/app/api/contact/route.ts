@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb, runMigration } from '@/lib/db';
+import { getDb, isTestReq, runMigration } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,10 +27,10 @@ const EMPTY = {
   wechatId: '', wechatQrUrl: '', wechatVisible: true,
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     await runMigration();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [rows] = await db.query('SELECT * FROM contact_info WHERE id = 1') as any[][];
     return NextResponse.json(rows.length ? rowToContact(rows[0]) : EMPTY, { headers: NO_CACHE });
   } catch (err) {
@@ -42,7 +42,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await db.query(
       `INSERT INTO contact_info
          (id, phone, phone_visible, email, email_visible,

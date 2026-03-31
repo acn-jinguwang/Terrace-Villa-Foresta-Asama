@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [rows] = await db.query(
       'SELECT * FROM media WHERE type = ? ORDER BY sort_order ASC, created_at DESC',
       ['video'],

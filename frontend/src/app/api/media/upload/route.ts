@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { putS3 } from '@/lib/s3';
 
 export const runtime = 'nodejs';
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No files provided' }, { status: 400 });
     }
 
-    const db      = getDb();
+    const db      = getDb(isTestReq(request));
     const results = [];
 
     for (const file of files) {
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       const today     = new Date().toISOString().split('T')[0];
       const size      = formatSize(file.size);
 
-      const url = await putS3(s3Key, buffer, file.type || 'application/octet-stream');
+      const url = await putS3(s3Key, buffer, file.type || 'application/octet-stream', isTestReq(request));
 
       await db.query(
         `INSERT INTO media (id, name, url, type, category, size, upload_date, s3_key, sort_order)

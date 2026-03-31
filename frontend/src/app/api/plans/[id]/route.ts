@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 import { rowToPlan, type PlanEntry } from '../route';
 
@@ -92,7 +92,7 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [[plans], [highlights], [days], [budget]] = await Promise.all([
       db.query('SELECT * FROM plans WHERE id = ?', [id]) as Promise<any[][]>,
       db.query('SELECT * FROM plan_highlights WHERE plan_id = ? ORDER BY sort_order ASC', [id]) as Promise<any[][]>,
@@ -118,7 +118,7 @@ export async function PUT(
       accommodationImages?: string[];
       conclusionZh?: string; conclusionJa?: string; conclusionEn?: string;
     } = await request.json();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
 
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -161,7 +161,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [result] = await db.query('DELETE FROM plans WHERE id = ?', [id]) as any[];
     if (result.affectedRows === 0) return NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE });
     return NextResponse.json({ success: true }, { headers: NO_STORE });

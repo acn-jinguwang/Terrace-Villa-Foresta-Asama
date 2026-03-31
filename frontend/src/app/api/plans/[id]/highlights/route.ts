@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
@@ -19,7 +19,7 @@ export async function GET(
 ) {
   const { id } = await params;
   try {
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [rows] = await db.query(
       'SELECT * FROM plan_highlights WHERE plan_id = ? ORDER BY sort_order ASC',
       [id],
@@ -52,7 +52,7 @@ export async function PUT(
     if (!Array.isArray(items)) {
       return NextResponse.json({ error: 'Expected array' }, { status: 400, headers: NO_STORE });
     }
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await db.query('DELETE FROM plan_highlights WHERE plan_id = ?', [id]);
     if (items.length > 0) {
       const values = items.map((item, idx) => [

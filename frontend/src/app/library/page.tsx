@@ -27,6 +27,7 @@ export default function LibraryPage() {
   const { t } = useLanguage();
   const pathname = usePathname();
   const base = pathname.startsWith('/test') ? '/test' : '';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
   const [activeCategory, setActiveCategory] = useState<CategoryValue>('all');
   const [images, setImages]                 = useState<MediaItem[]>([]);
   const [loading, setLoading]               = useState(true);
@@ -39,8 +40,8 @@ export default function LibraryPage() {
     const load = async () => {
       try {
         const [layoutRes, allImgRes] = await Promise.all([
-          fetch('/api/layouts'),
-          fetch('/api/media/images'),
+          fetch(apiBase + '/layouts'),
+          fetch(apiBase + '/media/images'),
         ]);
         const layout: Record<string, string[]> = layoutRes.ok ? await layoutRes.json() : {};
         const allImgs: MediaItem[] = allImgRes.ok ? await allImgRes.json() : [];

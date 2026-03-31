@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
 export interface PlanEntry {
@@ -59,7 +59,7 @@ export function rowToPlan(r: any, budgetItems?: any[]): PlanEntry {
 export async function GET(request: Request) {
   try {
     const isPublic = new URL(request.url).searchParams.get('public') === '1';
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const sql = isPublic
       ? 'SELECT * FROM plans WHERE visible = 1 ORDER BY sort_order ASC, created_at ASC'
       : 'SELECT * FROM plans ORDER BY sort_order ASC, created_at ASC';
@@ -85,7 +85,7 @@ export async function PATCH(request: Request) {
     if (!Array.isArray(order)) {
       return NextResponse.json({ error: 'order must be an array of IDs' }, { status: 400 });
     }
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await Promise.all(order.map((id, idx) =>
       db.query('UPDATE plans SET sort_order = ? WHERE id = ?', [idx, id]),
     ));
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     if (!body.id || !body.titleZh) {
       return NextResponse.json({ error: 'id and titleZh are required' }, { status: 400 });
     }
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [existing] = await db.query('SELECT id FROM plans WHERE id = ?', [body.id]) as any[][];
     if (existing.length) return NextResponse.json({ error: 'Plan ID already exists' }, { status: 409 });
 

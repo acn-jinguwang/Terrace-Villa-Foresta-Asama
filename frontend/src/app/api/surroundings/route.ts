@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb, runMigration, seedSurroundingsIfEmpty } from '@/lib/db';
+import { getDb, isTestReq, runMigration, seedSurroundingsIfEmpty } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
   try {
     await runMigration();
     await seedSurroundingsIfEmpty();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const { searchParams } = new URL(request.url);
     const admin = searchParams.get('admin') === '1';
     const [rows] = await db.query(
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
 export async function PUT(request: Request) {
   try {
     const b = await request.json();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await db.query(
       `INSERT INTO surroundings_spots
          (id, category, name_zh, name_ja, name_en,

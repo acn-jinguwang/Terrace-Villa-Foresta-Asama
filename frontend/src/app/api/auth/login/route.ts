@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSessionToken, hashPassword, COOKIE_NAME } from '@/lib/auth';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 
 function setCookie(response: NextResponse, token: string, isHttps: boolean) {
   response.cookies.set({
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   // ── 2. Database authentication ────────────────────────────────────────────
   try {
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [rows] = await db.query(
       'SELECT id, username, password_hash, role FROM users WHERE username = ? LIMIT 1',
       [username],

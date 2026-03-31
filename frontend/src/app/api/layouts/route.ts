@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, isTestReq } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
 const DEFAULT_LAYOUTS: Record<string, string[]> = {
@@ -13,9 +13,9 @@ const DEFAULT_LAYOUTS: Record<string, string[]> = {
 
 const NO_CACHE = { 'Cache-Control': 'no-store' };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     const [rows] = await db.query('SELECT section_key, image_urls FROM page_layouts') as any[][];
     const layouts = { ...DEFAULT_LAYOUTS };
     for (const r of rows) {
@@ -32,7 +32,7 @@ export async function GET() {
 export async function PUT(request: Request) {
   try {
     const layouts: Record<string, string[]> = await request.json();
-    const db = getDb();
+    const db = getDb(isTestReq(request));
     await Promise.all(
       Object.entries(layouts).map(([key, urls]) =>
         db.query(

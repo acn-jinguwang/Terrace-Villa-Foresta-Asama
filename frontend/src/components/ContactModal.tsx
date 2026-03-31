@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ContactInfo {
@@ -24,12 +25,14 @@ export default function ContactModal({ onClose }: Props) {
   const { language } = useLanguage();
   const lang = language as 'zh' | 'ja' | 'en';
   const t = label[lang] ?? label.en;
+  const pathname = usePathname();
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
 
   const [info, setInfo] = useState<ContactInfo | null>(null);
   const [qrTarget, setQrTarget] = useState<'line' | 'wechat' | null>(null);
 
   useEffect(() => {
-    fetch('/api/contact')
+    fetch(apiBase + '/contact')
       .then((r) => r.ok ? r.json() : null)
       .then((d) => setInfo(d))
       .catch(() => setInfo(null));
