@@ -1,0 +1,65 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [master]
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ACCOUNT: 237657481351
+  ECR_FRONTEND: foresta-asama-frontend
+  ECR_BACKEND: foresta-asama-backend
+  ECS_CLUSTER: foresta-asama-cluster
+  CF_ID: E1EFTV02COPCRN
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::237657481351:role/foresta-asama-github-actions-role
+          aws-region: ap-northeast-1
+
+      - name: Build & Push Frontend
+        run: |
+          aws ecr get-login-password | docker login --username AWS \
+            --password-stdin ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          docker build -t ${{ env.ECR_FRONTEND }}:prod ./frontend
+          docker tag ${{ env.ECR_FRONTEND }}:prod \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:prod
+          docker tag ${{ env.ECR_FRONTEND }}:prod \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:latest
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:prod
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:latest
+
+      - name: Build & Push Backend
+        run: |
+          docker build -t ${{ env.ECR_BACKEND }}:prod ./backend
+          docker tag ${{ env.ECR_BACKEND }}:prod \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BACKEND }}:prod
+          docker tag ${{ env.ECR_BACKEND }}:prod \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BACKEND }}:latest
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BACKEND }}:prod
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_BACKEND }}:latest
+
+      - name: Deploy ECS Frontend
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+            --service foresta-asama-frontend --force-new-deployment
+
+      - name: Deploy ECS Backend
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+            --service foresta-asama-backend --force-new-deployment
+
+      - name: CloudFront Invalidation
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CF_ID }} --paths "/*"
