@@ -1,0 +1,51 @@
+name: Deploy Test (/test)
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  AWS_REGION: ap-northeast-1
+  AWS_ACCOUNT: 237657481351
+  ECR_FRONTEND: foresta-asama-frontend
+  ECS_CLUSTER: foresta-asama-cluster
+  CF_ID: E1EFTV02COPCRN
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::237657481351:role/foresta-asama-github-actions-role
+          aws-region: ap-northeast-1
+
+      - name: Build & Push Frontend (test)
+        run: |
+          aws ecr get-login-password | docker login --username AWS \
+            --password-stdin ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          # NEXT_PUBLIC_TEST_MODE=true をビルド引数として渡す
+          docker build --build-arg NEXT_PUBLIC_TEST_MODE=true \
+            -t ${{ env.ECR_FRONTEND }}:test ./frontend
+          docker tag ${{ env.ECR_FRONTEND }}:test \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:test
+          docker tag ${{ env.ECR_FRONTEND }}:test \
+            ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:latest
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:test
+          docker push ${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_FRONTEND }}:latest
+
+      - name: Deploy ECS Frontend
+        run: |
+          aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+            --service foresta-asama-frontend --force-new-deployment
+
+      - name: CloudFront Invalidation (test path only)
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CF_ID }} --paths "/test/*"
