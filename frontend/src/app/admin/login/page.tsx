@@ -7,6 +7,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const pathname = usePathname();
   const adminBase = pathname.startsWith('/test') ? '/test/admin' : '/admin';
+  const apiBase   = pathname.startsWith('/test') ? '/test/api'   : '/api';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -17,7 +18,7 @@ export default function AdminLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(apiBase + '/auth/login', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ username, password }),

@@ -378,7 +378,7 @@ export default function AdminPage() {
     if (usage) { showMessage('error', `削除不可 — 使用中: ${usage}`); return; }
     if (!window.confirm('Are you sure you want to delete this file?')) return;
     try {
-      const res = await fetch(`/api/media/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiBase + `/media/${id}`, { method: 'DELETE' });
       if (res.ok) { setFiles((prev) => prev.filter((f) => f.id !== id)); showMessage('success', 'ファイルを削除しました'); }
       else showMessage('error', t(translations.common.error));
     } catch { showMessage('error', t(translations.common.error)); }
@@ -388,7 +388,7 @@ export default function AdminPage() {
 
   const handleToggleVisible = async (plan: PlanEntry) => {
     try {
-      const res = await fetch(`/api/plans/${plan.id}`, {
+      const res = await fetch(apiBase + `/plans/${plan.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visible: !plan.visible }),
       });
@@ -403,7 +403,7 @@ export default function AdminPage() {
   const handleDeletePlan = async (id: string) => {
     if (!window.confirm('Delete this plan? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/plans/${id}`, { method: 'DELETE' });
+      const res = await fetch(apiBase + `/plans/${id}`, { method: 'DELETE' });
       if (res.ok) { setPlans((prev) => prev.filter((p) => p.id !== id)); showMessage('success', 'プランを削除しました'); }
       else showMessage('error', t(translations.common.error));
     } catch { showMessage('error', t(translations.common.error)); }
@@ -443,7 +443,7 @@ export default function AdminPage() {
     setEditorImagePickerCtx(null);
     // fetch full plan data
     try {
-      const res = await fetch(`/api/plans/${plan.id}`);
+      const res = await fetch(apiBase + `/plans/${plan.id}`);
       if (res.ok) {
         const full = await res.json();
         setEditorForm({
@@ -532,7 +532,7 @@ export default function AdminPage() {
     try {
       const f = editorForm;
       // 1. PUT basic plan data
-      const planRes = await fetch(`/api/plans/${planEditorId}`, {
+      const planRes = await fetch(apiBase + `/plans/${planEditorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -555,7 +555,7 @@ export default function AdminPage() {
         descriptionZh: h.descriptionZh, descriptionJa: h.descriptionJa, descriptionEn: h.descriptionEn,
         imageUrl: h.imageUrl,
       }));
-      const hlRes = await fetch(`/api/plans/${planEditorId}/highlights`, {
+      const hlRes = await fetch(apiBase + `/plans/${planEditorId}/highlights`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(highlightsPayload),
@@ -573,7 +573,7 @@ export default function AdminPage() {
         mealLunchZh:   d.mealLunchZh,   mealLunchJa:   d.mealLunchJa,   mealLunchEn:   d.mealLunchEn,
         mealDinnerZh:  d.mealDinnerZh,  mealDinnerJa:  d.mealDinnerJa,  mealDinnerEn:  d.mealDinnerEn,
       }));
-      const daysRes = await fetch(`/api/plans/${planEditorId}/days`, {
+      const daysRes = await fetch(apiBase + `/plans/${planEditorId}/days`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(daysPayload),
@@ -589,7 +589,7 @@ export default function AdminPage() {
         amountEn: b.amountEn, currencyEn: b.currencyEn,
         noteZh: b.noteZh, noteJa: b.noteJa, noteEn: b.noteEn,
       }));
-      const budgetRes = await fetch(`/api/plans/${planEditorId}/budget`, {
+      const budgetRes = await fetch(apiBase + `/plans/${planEditorId}/budget`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(budgetPayload),
@@ -660,7 +660,7 @@ export default function AdminPage() {
     if (!window.confirm(`未使用の画像 ${unused.length} 件を削除します。この操作は元に戻せません。`)) return;
     setBulkDeleting(true);
     try {
-      const results = await Promise.all(unused.map((f) => fetch(`/api/media/${f.id}`, { method: 'DELETE' })));
+      const results = await Promise.all(unused.map((f) => fetch(apiBase + `/media/${f.id}`, { method: 'DELETE' })));
       const deletedIds = unused.filter((_, i) => results[i].ok).map((f) => f.id);
       setFiles((prev) => prev.filter((f) => !deletedIds.includes(f.id)));
       showMessage('success', `${deletedIds.length} 件削除しました`);
@@ -674,7 +674,7 @@ export default function AdminPage() {
     if (!editingMetaFile) return;
     setMetaSaving(true);
     try {
-      const res = await fetch(`/api/media/${editingMetaFile.id}`, {
+      const res = await fetch(apiBase + `/media/${editingMetaFile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: metaForm.name, category: metaForm.category }),
@@ -2248,7 +2248,7 @@ export default function AdminPage() {
           const handleVisibleToggle = async (spot: SurroundingSpot) => {
             const next = !spot.visible;
             setSurroundingSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, visible: next } : s));
-            await fetch(`/api/surroundings/${spot.id}`, {
+            await fetch(apiBase + `/surroundings/${spot.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ visible: next }),
@@ -2257,7 +2257,7 @@ export default function AdminPage() {
 
           const handleDelete = async (id: string) => {
             if (!confirm('このスポットを削除しますか？')) return;
-            await fetch(`/api/surroundings/${id}`, { method: 'DELETE' });
+            await fetch(apiBase + `/surroundings/${id}`, { method: 'DELETE' });
             setSurroundingSpots((prev) => prev.filter((s) => s.id !== id));
             if (surroundingEditId === id) setSurroundingEditId(null);
           };
