@@ -315,6 +315,187 @@ export async function ensureSeasonsTables(isTest = false): Promise<void> {
   }
 }
 
+// ─── Season initial data — seeded once per DB when table is empty ─────────────
+
+type SeasonKey = 'spring' | 'summer' | 'autumn' | 'winter';
+
+interface SeedSpot {
+  season: SeasonKey;
+  nameZh: string; nameJa: string; nameEn: string;
+  descZh: string; descJa: string; descEn: string;
+  accessZh: string; accessJa: string; accessEn: string;
+  distanceMin: number;
+  isFeatured: boolean;
+  displayOrder: number;
+}
+
+const DEFAULT_SEASONS: SeedSpot[] = [
+  // ── 春 Spring ──────────────────────────────────────────────────────────────
+  {
+    season: 'spring', isFeatured: true, displayOrder: 0, distanceMin: 15,
+    nameZh: '轻井泽王子购物广场', nameJa: '軽井沢・プリンスショッピングプラザ', nameEn: 'Karuizawa Prince Shopping Plaza',
+    descZh: '日本最大规模的奥特莱斯之一，汇聚了超过220家品牌店铺，包括Gucci、Prada等顶级奢侈品牌。支持免税及微信支付，别墅距此约15分钟车程。',
+    descJa: '国内最大級のアウトレットモール。グッチ・プラダ等の高級ブランドを含む220店舗以上が集結。免税・WeChat Pay対応。別荘から車で約15分。',
+    descEn: "One of Japan's largest outlet malls with over 220 stores including Gucci and Prada. Tax-free shopping and WeChat Pay available. About 15 minutes from the villa.",
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'spring', isFeatured: true, displayOrder: 1, distanceMin: 10,
+    nameZh: '星野温泉 蜻蜓之汤', nameJa: '星野温泉 トンボの湯', nameEn: 'Hoshinoya Onsen Tombo-no-yu',
+    descZh: '轻井泽代表性的温泉设施。弱碱性泉质，被称为「美肌之汤」，深受女性旅客喜爱。距别墅仅约10分钟。',
+    descJa: '軽井沢を代表する温泉施設。弱アルカリ性の泉質は「美人の湯」として女性に人気。別荘から約10分。',
+    descEn: "Karuizawa's premier hot spring facility. The slightly alkaline water is known as a \"beauty spring.\" About 10 minutes from the villa.",
+    accessZh: '距别墅约10分钟车程', accessJa: '別荘から車で約10分', accessEn: 'About 10 min by car from the villa',
+  },
+  {
+    season: 'spring', isFeatured: false, displayOrder: 2, distanceMin: 20,
+    nameZh: '白丝瀑布', nameJa: '白糸の滝', nameEn: 'Shiraito Falls',
+    descZh: '细如白丝般倾泻而下的美丽瀑布，宽约70米，春季水量充沛。被指定为国家名胜及天然纪念物。',
+    descJa: '白糸のように繊細に流れる幅約70mの美しい滝。春は水量が豊富で迫力満点。国の名勝・天然記念物に指定。',
+    descEn: 'Beautiful waterfall flowing like white silk threads, about 70m wide. A national scenic spot and natural monument. Especially impressive in spring.',
+    accessZh: '距别墅约20分钟车程', accessJa: '別荘から車で約20分', accessEn: 'About 20 min by car from the villa',
+  },
+  {
+    season: 'spring', isFeatured: false, displayOrder: 3, distanceMin: 18,
+    nameZh: '旧轻井泽银座商店街', nameJa: '旧軽井沢銀座', nameEn: 'Old Karuizawa Ginza',
+    descZh: '轻井泽最具历史风情的购物街，两侧林立着珠宝、工艺品、咖啡馆等特色店铺。春天绿意盎然，悠闲漫步最为惬意。',
+    descJa: '軽井沢らしい風情漂うショッピングストリート。宝石・工芸品・カフェなど個性豊かな店が並ぶ。春は新緑の中の散策が心地よい。',
+    descEn: 'Karuizawa\'s most charming shopping street lined with jewelry, crafts, and cafes. A leisurely spring stroll amid fresh greenery is a must.',
+    accessZh: '距别墅约18分钟车程', accessJa: '別荘から車で約18分', accessEn: 'About 18 min by car from the villa',
+  },
+
+  // ── 夏 Summer ──────────────────────────────────────────────────────────────
+  {
+    season: 'summer', isFeatured: true, displayOrder: 0, distanceMin: 15,
+    nameZh: '轻井泽王子购物广场', nameJa: '軽井沢・プリンスショッピングプラザ', nameEn: 'Karuizawa Prince Shopping Plaza',
+    descZh: '日本最大规模的奥特莱斯之一，汇聚了超过220家品牌店铺，包括Gucci、Prada等顶级奢侈品牌。支持免税及微信支付，别墅距此约15分钟车程。',
+    descJa: '国内最大級のアウトレットモール。グッチ・プラダ等の高級ブランドを含む220店舗以上が集結。免税・WeChat Pay対応。別荘から車で約15分。',
+    descEn: "One of Japan's largest outlet malls with over 220 stores including Gucci and Prada. Tax-free shopping and WeChat Pay available. About 15 minutes from the villa.",
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'summer', isFeatured: true, displayOrder: 1, distanceMin: 10,
+    nameZh: '星野温泉 蜻蜓之汤', nameJa: '星野温泉 トンボの湯', nameEn: 'Hoshinoya Onsen Tombo-no-yu',
+    descZh: '轻井泽代表性的温泉设施。弱碱性泉质，被称为「美肌之汤」，深受女性旅客喜爱。距别墅仅约10分钟。',
+    descJa: '軽井沢を代表する温泉施設。弱アルカリ性の泉質は「美人の湯」として女性に人気。別荘から約10分。',
+    descEn: "Karuizawa's premier hot spring facility. The slightly alkaline water is known as a \"beauty spring.\" About 10 minutes from the villa.",
+    accessZh: '距别墅约10分钟车程', accessJa: '別荘から車で約10分', accessEn: 'About 10 min by car from the villa',
+  },
+  {
+    season: 'summer', isFeatured: false, displayOrder: 2, distanceMin: 20,
+    nameZh: '轻井泽高尔夫球场', nameJa: '軽井沢ゴルフ場', nameEn: 'Karuizawa Golf Course',
+    descZh: '海拔约1000米的高原高尔夫球场，夏季气候凉爽宜人。多个球场可供选择，享受被绿意包围的高原高尔夫体验。',
+    descJa: '標高約1000mの高原ゴルフ場。夏でも涼しく快適なプレーが楽しめる。複数コースが揃い、緑に囲まれた高原ゴルフを満喫できる。',
+    descEn: 'Highland golf course at 1,000m elevation — cool and comfortable even in summer. Multiple courses available amid lush greenery.',
+    accessZh: '距别墅约20分钟车程', accessJa: '別荘から車で約20分', accessEn: 'About 20 min by car from the villa',
+  },
+  {
+    season: 'summer', isFeatured: false, displayOrder: 3, distanceMin: 12,
+    nameZh: '轻井泽高原教堂', nameJa: '軽井沢高原教会', nameEn: 'Karuizawa Kogen Church',
+    descZh: '坐落于白桦林中的浪漫石造教堂，夏季绿荫与教堂白墙相映成趣，是轻井泽极具代表性的风景。',
+    descJa: '白樺林に佇むロマンティックな石造りの教会。夏の緑と白い外壁のコントラストが軽井沢らしい絶景を作り出す。',
+    descEn: 'A romantic stone church nestled in a birch forest. The contrast of summer greenery against its white walls creates a quintessential Karuizawa scene.',
+    accessZh: '距别墅约12分钟车程', accessJa: '別荘から車で約12分', accessEn: 'About 12 min by car from the villa',
+  },
+
+  // ── 秋 Autumn ──────────────────────────────────────────────────────────────
+  {
+    season: 'autumn', isFeatured: true, displayOrder: 0, distanceMin: 15,
+    nameZh: '云场池（红叶名所）', nameJa: '雲場池（紅葉）', nameEn: 'Kumoba Pond (Autumn Foliage)',
+    descZh: '秋季最值得一游的景点。池面倒映的绚烂红叶被誉为轻井泽最美的风景，每年10月中旬至11月初为最佳观赏期。别墅约15分钟可达。',
+    descJa: '秋の必訪スポット。池面に映る燃えるような紅葉は軽井沢随一の絶景。例年10月中旬〜11月上旬が見頃。約15分。',
+    descEn: 'The must-visit spot in autumn. The blazing foliage reflected in the pond is Karuizawa\'s most stunning scenery. Best viewed from mid-October to early November.',
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'autumn', isFeatured: true, displayOrder: 1, distanceMin: 15,
+    nameZh: '轻井泽王子购物广场', nameJa: '軽井沢・プリンスショッピングプラザ', nameEn: 'Karuizawa Prince Shopping Plaza',
+    descZh: '日本最大规模的奥特莱斯之一，汇聚了超过220家品牌店铺，包括Gucci、Prada等顶级奢侈品牌。支持免税及微信支付，别墅距此约15分钟车程。',
+    descJa: '国内最大級のアウトレットモール。グッチ・プラダ等の高級ブランドを含む220店舗以上が集結。免税・WeChat Pay対応。別荘から車で約15分。',
+    descEn: "One of Japan's largest outlet malls with over 220 stores including Gucci and Prada. Tax-free shopping and WeChat Pay available. About 15 minutes from the villa.",
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'autumn', isFeatured: true, displayOrder: 2, distanceMin: 10,
+    nameZh: '星野温泉 蜻蜓之汤', nameJa: '星野温泉 トンボの湯', nameEn: 'Hoshinoya Onsen Tombo-no-yu',
+    descZh: '轻井泽代表性的温泉设施。弱碱性泉质，被称为「美肌之汤」，深受女性旅客喜爱。距别墅仅约10分钟。',
+    descJa: '軽井沢を代表する温泉施設。弱アルカリ性の泉質は「美人の湯」として女性に人気。別荘から約10分。',
+    descEn: "Karuizawa's premier hot spring facility. The slightly alkaline water is known as a \"beauty spring.\" About 10 minutes from the villa.",
+    accessZh: '距别墅约10分钟车程', accessJa: '別荘から車で約10分', accessEn: 'About 10 min by car from the villa',
+  },
+  {
+    season: 'autumn', isFeatured: false, displayOrder: 3, distanceMin: 20,
+    nameZh: '轻井泽酒窖', nameJa: '軽井沢ワインセラー', nameEn: 'Karuizawa Wine Cellar',
+    descZh: '拥有百余年历史的酿酒厂，秋天正是葡萄收获的季节。可参观酒窖、品尝当地葡萄酒，体验轻井沢独特的酿酒文化。',
+    descJa: '百年以上の歴史を持つワイナリー。秋はぶどうの収穫期。セラー見学やテイスティングで軽井沢のワイン文化を体験できる。',
+    descEn: 'A winery with over a century of history. Autumn is harvest season — enjoy cellar tours and wine tastings to experience Karuizawa\'s winemaking culture.',
+    accessZh: '距别墅约20分钟车程', accessJa: '別荘から車で約20分', accessEn: 'About 20 min by car from the villa',
+  },
+
+  // ── 冬 Winter ──────────────────────────────────────────────────────────────
+  {
+    season: 'winter', isFeatured: true, displayOrder: 0, distanceMin: 15,
+    nameZh: '轻井泽王子酒店滑雪场', nameJa: '軽井沢プリンスホテルスキー場', nameEn: 'Karuizawa Prince Hotel Ski Resort',
+    descZh: '从东京出发约70分钟即可抵达的便捷滑雪场，初学者专用坡道完善，附设滑雪学校与租赁服务。别墅距此约15分钟车程。',
+    descJa: '東京から約70分でアクセスできるスキー場。初心者向けゲレンデが充実し、スクールとレンタルも完備。別荘から約15分。',
+    descEn: 'Conveniently located just 70 minutes from Tokyo. Excellent beginner slopes with ski school and full rental equipment. About 15 minutes from the villa.',
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'winter', isFeatured: true, displayOrder: 1, distanceMin: 10,
+    nameZh: '星野温泉 蜻蜓之汤（雪见露天浴）', nameJa: '星野温泉 トンボの湯（雪見露天）', nameEn: 'Hoshinoya Onsen Tombo-no-yu (Snow View)',
+    descZh: '冬季限定的雪见露天温泉体验。一边泡汤，一边欣赏雪景，是轻井泽冬季最奢华的享受。距别墅约10分钟。',
+    descJa: '冬季限定の雪見露天を楽しめる。湯に浸かりながら雪景色を眺める体験は軽井沢冬の最高の贅沢。別荘から約10分。',
+    descEn: 'Winter-only snow-view open-air bath. Soaking in hot spring while gazing at snowscapes — the ultimate winter luxury in Karuizawa. About 10 minutes away.',
+    accessZh: '距别墅约10分钟车程', accessJa: '別荘から車で約10分', accessEn: 'About 10 min by car from the villa',
+  },
+  {
+    season: 'winter', isFeatured: false, displayOrder: 2, distanceMin: 15,
+    nameZh: '轻井泽冰上公园', nameJa: 'アイスパーク（スケート）', nameEn: 'Karuizawa Ice Park',
+    descZh: '轻井泽王子大饭店内的正式冰上运动场，冬季开放溜冰。可租借冰刀，适合全家老少同乐。',
+    descJa: '軽井沢プリンスホテル内の本格的なアイスリンク。スケート靴のレンタルあり、家族みんなで楽しめる。',
+    descEn: 'A full-size ice rink within the Karuizawa Prince Hotel. Skate rentals available — fun for the whole family.',
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+  {
+    season: 'winter', isFeatured: false, displayOrder: 3, distanceMin: 12,
+    nameZh: '轻井泽圣诞市集', nameJa: 'クリスマスマーケット', nameEn: 'Karuizawa Christmas Market',
+    descZh: '以德国正宗圣诞市集为原型的冬季活动，在星野度假区举办。夜晚灯光璀璨，工艺品摊位与热葡萄酒营造出浓郁的节日气氛。',
+    descJa: 'ドイツ本場のクリスマスマーケットをモデルにしたイベントが星野リゾートで開催。夜の光と手工芸品、グリューワインで祝祭ムードを満喫。',
+    descEn: 'A German-style Christmas Market hosted at Hoshino Resort. Evening lights, handcrafts, and mulled wine create a festive winter atmosphere.',
+    accessZh: '距别墅约12分钟车程', accessJa: '別荘から車で約12分', accessEn: 'About 12 min by car from the villa',
+  },
+  {
+    season: 'winter', isFeatured: false, displayOrder: 4, distanceMin: 15,
+    nameZh: '轻井泽王子购物广场', nameJa: '軽井沢・プリンスショッピングプラザ', nameEn: 'Karuizawa Prince Shopping Plaza',
+    descZh: '日本最大规模的奥特莱斯之一，汇聚了超过220家品牌店铺，包括Gucci、Prada等顶级奢侈品牌。支持免税及微信支付，别墅距此约15分钟车程。',
+    descJa: '国内最大級のアウトレットモール。グッチ・プラダ等の高級ブランドを含む220店舗以上が集結。免税・WeChat Pay対応。別荘から車で約15分。',
+    descEn: "One of Japan's largest outlet malls with over 220 stores including Gucci and Prada. Tax-free shopping and WeChat Pay available. About 15 minutes from the villa.",
+    accessZh: '距别墅约15分钟车程', accessJa: '別荘から車で約15分', accessEn: 'About 15 min by car from the villa',
+  },
+];
+
+export async function seedSeasonsIfEmpty(isTest = false): Promise<void> {
+  const db = getDb(isTest);
+  const [rows] = await db.query('SELECT COUNT(*) AS cnt FROM seasons') as any[][];
+  if (rows[0].cnt > 0) return;
+  for (const s of DEFAULT_SEASONS) {
+    await db.query(
+      `INSERT INTO seasons
+         (season, name_zh, name_ja, name_en, desc_zh, desc_ja, desc_en,
+          access_zh, access_ja, access_en, distance_min, is_featured, display_order, is_active)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,
+      [
+        s.season, s.nameZh, s.nameJa, s.nameEn,
+        s.descZh, s.descJa, s.descEn,
+        s.accessZh, s.accessJa, s.accessEn,
+        s.distanceMin, s.isFeatured ? 1 : 0, s.displayOrder,
+      ],
+    );
+  }
+  console.log('[db] seasons seeded with', DEFAULT_SEASONS.length, 'spots');
+}
+
 // Default surroundings spots — seeded once when table is empty
 const DEFAULT_SPOTS = [
   { id: 'shiraito',     category: 'nature',   nameZh: '白丝瀑布',         nameJa: '白糸の滝',             nameEn: 'Shiraito Falls',

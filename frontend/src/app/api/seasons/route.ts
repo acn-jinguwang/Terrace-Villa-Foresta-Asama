@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb, isTestReq, ensureSeasonsTables } from '@/lib/db';
+import { getDb, isTestReq, ensureSeasonsTables, seedSeasonsIfEmpty } from '@/lib/db';
 import { normalizeUrl } from '@/lib/s3';
 
 export const dynamic = 'force-dynamic';
@@ -43,6 +43,7 @@ export async function GET(request: Request) {
   try {
     const isTest = isTestReq(request);
     await ensureSeasonsTables(isTest);
+    await seedSeasonsIfEmpty(isTest);
     const db = getDb(isTest);
     const { searchParams } = new URL(request.url);
     const season  = searchParams.get('season') as Season | null;
