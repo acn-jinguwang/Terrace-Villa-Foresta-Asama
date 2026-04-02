@@ -272,6 +272,8 @@ export default function AdminPage() {
     distanceMin: 15, isFeatured: false, displayOrder: 0, isActive: true, images: [],
   });
   const [seasonForm, setSeasonForm]         = useState<SeasonSpotAdmin>(blankSeason());
+  const [seasonCovers, setSeasonCovers]     = useState<Record<string, string | null>>({ spring: null, summer: null, autumn: null, winter: null });
+  const [coverUploading, setCoverUploading] = useState<string | null>(null);
 
   // ── Announcements state ──
   const blankAnnouncement = (): Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'> => ({
@@ -378,6 +380,10 @@ export default function AdminPage() {
       .then((d) => setSeasonSpots(d.spots ?? []))
       .catch(() => {})
       .finally(() => setSeasonLoading(false));
+    fetch(`${apiBase}/seasons/covers`)
+      .then((r) => r.ok ? r.json() : {})
+      .then((d) => setSeasonCovers(d))
+      .catch(() => {});
   }, [activeTab, seasonTab]);
 
   // ── Load announcements when tab is activated ──
@@ -2911,6 +2917,76 @@ export default function AdminPage() {
                     {SEASON_LABEL[s]}
                   </button>
                 ))}
+              </div>
+
+              {/* ── Season Cover Images ── */}
+              <div className="border border-white/10 p-4 bg-white/2">
+                <h3 className="font-display text-gold text-xs uppercase tracking-widest mb-4">
+                  Top Page Season Cover Images
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {SEASON_KEYS.map((s) => (
+                    <div key={s} className="flex flex-col gap-2">
+                      <p className="font-display text-[10px] uppercase tracking-widest text-white/50">{SEASON_LABEL[s]}</p>
+                      <div className="relative aspect-[3/4] bg-white/5 border border-white/10 overflow-hidden">
+                        {seasonCovers[s] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={seasonCovers[s]!} alt={s} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-white/15 text-[10px] font-display uppercase">No image</span>
+                          </div>
+                        )}
+                        {coverUploading === s && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-gold text-[10px] font-display uppercase tracking-widest">Uploading…</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <label className="flex-1 px-2 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold font-display text-[9px] uppercase tracking-widest cursor-pointer text-center transition-colors">
+                          {seasonCovers[s] ? 'Change' : 'Upload'}
+                          <input type="file" accept="image/*" className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setCoverUploading(s);
+                              try {
+                                const fd = new FormData();
+                                fd.append('file', file);
+                                fd.append('season', s);
+                                const res = await fetch(`${apiBase}/seasons/covers/upload`, { method: 'POST', body: fd });
+                                if (res.ok) {
+                                  const d = await res.json();
+                                  setSeasonCovers((prev) => ({ ...prev, [s]: d.imageUrl }));
+                                  showMessage('success', `${SEASON_LABEL[s]} cover updated.`);
+                                } else {
+                                  showMessage('error', 'Upload failed.');
+                                }
+                              } catch {
+                                showMessage('error', 'Upload failed.');
+                              } finally {
+                                setCoverUploading(null);
+                                e.target.value = '';
+                              }
+                            }}
+                          />
+                        </label>
+                        {seasonCovers[s] && (
+                          <button
+                            className="px-2 py-1.5 border border-red-500/30 text-red-400/70 hover:text-red-400 font-display text-[9px] uppercase tracking-widest transition-colors"
+                            onClick={async () => {
+                              if (!confirm(`Remove ${SEASON_LABEL[s]} cover image?`)) return;
+                              await fetch(`${apiBase}/seasons/covers?season=${s}`, { method: 'DELETE' });
+                              setSeasonCovers((prev) => ({ ...prev, [s]: null }));
+                              showMessage('success', 'Removed.');
+                            }}
+                          >✕</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Header row */}

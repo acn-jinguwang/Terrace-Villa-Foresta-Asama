@@ -12,7 +12,7 @@ const baseNavItems = [
   { key: 'library',      href: '/library',       labelZh: 'Gallery',     labelJa: 'Gallery', labelEn: 'Gallery' },
   { key: 'plans',        href: '/plans',         labelZh: 'Plans',       labelJa: 'Plans', labelEn: 'Plans' },
   { key: 'surroundings', href: '/surroundings',  labelZh: 'Surroundings', labelJa: 'Surroundings', labelEn: 'Surroundings' },
-  { key: 'seasons',      href: '/seasons',       labelZh: '四季',         labelJa: '四季',   labelEn: 'Seasons' },
+  { key: 'seasons',      href: '/seasons',       labelZh: 'Seasons',      labelJa: 'Seasons', labelEn: 'Seasons' },
 ];
 
 const languages: { code: Language; label: string }[] = [
@@ -42,7 +42,8 @@ export default function Header() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+      style={{ top: 'var(--banner-h, 0px)' }}
+      className={`fixed left-0 right-0 z-50 transition-all duration-500 ${
         scrolled
           ? 'bg-dark/95 backdrop-blur-md border-b border-white/5'
           : 'bg-transparent'

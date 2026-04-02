@@ -55,6 +55,7 @@ export default function Footer() {
                 { key: 'library', href: base + '/library' },
                 { key: 'plans', href: base + '/plans' },
                 { key: 'surroundings', href: base + '/surroundings' },
+                { key: 'seasons', href: base + '/seasons' },
               ].map((item) => (
                 <Link
                   key={item.key}

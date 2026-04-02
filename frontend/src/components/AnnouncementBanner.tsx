@@ -25,6 +25,12 @@ export default function AnnouncementBanner() {
       .catch(() => {});
   }, [apiBase]);
 
+  // Sync CSS variable so Header can offset itself
+  useEffect(() => {
+    const h = data && !dismissed ? '38px' : '0px';
+    document.documentElement.style.setProperty('--banner-h', h);
+  }, [data, dismissed]);
+
   if (!data || dismissed) return null;
 
   const isImportant = data.style_variant === 'important';
@@ -39,7 +45,7 @@ export default function AnnouncementBanner() {
   const textClr = isImportant ? '#faf0d0' : '#faf8f2';
 
   return (
-    <div style={{ background: bg, height: 38, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, position: 'relative', zIndex: 60 }}>
+    <div style={{ background: bg, height: 38, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 60 }}>
       {/* Left accent */}
       <div style={{ flexShrink: 0, width: isImportant ? 8 : 3, height: '100%', background: '#c9a96e' }} />
 

@@ -164,7 +164,8 @@ export default function HomePage() {
         if (videos.length > 0) setVideoSrc(videos[0].url);
         setPlans(plansData);
 
-        // Fetch main image for each season
+        // Fetch season cover images (set from Admin) — fall back to first spot image
+        const coversRes: Record<string, string | null> = await fetch(`${apiBase}/seasons/covers`).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
         const seasonKeys = ['spring', 'summer', 'autumn', 'winter'] as const;
         const seasonResults = await Promise.all(
           seasonKeys.map((s) =>
@@ -174,6 +175,9 @@ export default function HomePage() {
           ),
         );
         setSeasonCards((prev) => prev.map((card, i) => {
+          // Prefer admin-set cover image; fall back to first spot image
+          const coverUrl = coversRes[card.key] ?? null;
+          if (coverUrl) return { ...card, mainImage: coverUrl };
           const spots = seasonResults[i]?.spots ?? [];
           const firstWithImg = spots.find((s: any) => s.images?.length > 0);
           const mainImg = firstWithImg

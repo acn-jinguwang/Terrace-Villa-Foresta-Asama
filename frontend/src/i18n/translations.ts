@@ -7,6 +7,7 @@ export const translations = {
     library: { zh: '图片库', ja: 'フォトギャラリー', en: 'Gallery' },
     plans: { zh: '旅行方案', ja: '旅行プラン', en: 'Travel Plans' },
     surroundings: { zh: '周边介绍', ja: '周辺案内', en: 'Surroundings' },
+    seasons: { zh: 'Seasons', ja: 'Seasons', en: 'Seasons' },
     admin: { zh: '管理', ja: '管理', en: 'Admin' },
   },
 

@@ -565,6 +565,20 @@ export async function seedSurroundingsIfEmpty(): Promise<void> {
 
 // ─── Announcements ────────────────────────────────────────────────────────────
 
+const SEASON_COVERS_DDL = `CREATE TABLE IF NOT EXISTS season_covers (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  season     ENUM('spring','summer','autumn','winter') NOT NULL,
+  image_url  TEXT NOT NULL,
+  s3_key     VARCHAR(512) NOT NULL DEFAULT '',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_season (season)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`;
+
+export async function ensureSeasonCoversTable(isTest = false): Promise<void> {
+  const db = getDb(isTest);
+  await db.query(SEASON_COVERS_DDL);
+}
+
 const ANNOUNCEMENTS_DDL = `CREATE TABLE IF NOT EXISTS announcements (
   id             INT AUTO_INCREMENT PRIMARY KEY,
   message_cn     TEXT NOT NULL,
