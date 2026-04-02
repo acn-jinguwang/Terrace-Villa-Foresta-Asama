@@ -84,6 +84,7 @@ export async function runMigration(): Promise<void> {
       id            INT AUTO_INCREMENT PRIMARY KEY,
       username      VARCHAR(100) UNIQUE NOT NULL,
       password_hash VARCHAR(255) NOT NULL,
+      role          VARCHAR(50)  DEFAULT 'admin',
       created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
@@ -268,6 +269,50 @@ export async function runMigration(): Promise<void> {
   }
 
   console.log('[db] migration complete');
+}
+
+// ─── Seasons tables — created per-request with the correct DB (prod or test) ──
+
+const SEASONS_DDL = [
+  `CREATE TABLE IF NOT EXISTS seasons (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    season        ENUM('spring','summer','autumn','winter') NOT NULL,
+    name_zh       VARCHAR(200) NOT NULL DEFAULT '',
+    name_ja       VARCHAR(200) NOT NULL DEFAULT '',
+    name_en       VARCHAR(200) NOT NULL DEFAULT '',
+    desc_zh       TEXT,
+    desc_ja       TEXT,
+    desc_en       TEXT,
+    access_zh     VARCHAR(300) DEFAULT '',
+    access_ja     VARCHAR(300) DEFAULT '',
+    access_en     VARCHAR(300) DEFAULT '',
+    distance_min  INT          DEFAULT 0,
+    is_featured   TINYINT(1)   DEFAULT 0,
+    display_order INT          DEFAULT 0,
+    is_active     TINYINT(1)   DEFAULT 1,
+    created_at    DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    updated_at    DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS season_images (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    season_id     INT          NOT NULL,
+    image_url     VARCHAR(500) NOT NULL DEFAULT '',
+    s3_key        VARCHAR(500) DEFAULT '',
+    alt_zh        VARCHAR(200) DEFAULT '',
+    alt_ja        VARCHAR(200) DEFAULT '',
+    alt_en        VARCHAR(200) DEFAULT '',
+    is_main       TINYINT(1)   DEFAULT 0,
+    display_order INT          DEFAULT 0,
+    INDEX idx_season_id (season_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+];
+
+export async function ensureSeasonsTables(isTest = false): Promise<void> {
+  const db = getDb(isTest);
+  for (const sql of SEASONS_DDL) {
+    await db.query(sql);
+  }
 }
 
 // Default surroundings spots — seeded once when table is empty
