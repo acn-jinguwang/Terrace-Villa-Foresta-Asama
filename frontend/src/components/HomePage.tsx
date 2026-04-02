@@ -27,6 +27,15 @@ interface PlanEntry {
   budgetTotalEn: string | null;
 }
 
+interface SeasonCard {
+  key: 'spring' | 'summer' | 'autumn' | 'winter';
+  icon: string;
+  labelZh: string; labelJa: string; labelEn: string;
+  periodZh: string; periodJa: string; periodEn: string;
+  catchZh: string; catchJa: string; catchEn: string;
+  mainImage: string | null;
+}
+
 // Placeholder gradient backgrounds shown when no images are uploaded yet
 const heroGradients = [
   'from-[#0a0a0a] via-[#1a1208] to-[#0a0a0a]',
@@ -112,6 +121,24 @@ export default function HomePage() {
   const [surroundingsImages, setSurroundingsImages] = useState<MediaItem[]>([]);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [plans, setPlans]       = useState<PlanEntry[]>([]);
+  const [seasonCards, setSeasonCards] = useState<SeasonCard[]>([
+    { key: 'spring', icon: '🌸', labelZh: '春', labelJa: '春', labelEn: 'Spring',
+      periodZh: '3月〜5月', periodJa: '3月〜5月', periodEn: 'Mar – May',
+      catchZh: '樱花与购物', catchJa: '桜と買い物', catchEn: 'Cherry Blossoms & Shopping',
+      mainImage: null },
+    { key: 'summer', icon: '🌿', labelZh: '夏', labelJa: '夏', labelEn: 'Summer',
+      periodZh: '6月〜8月', periodJa: '6月〜8月', periodEn: 'Jun – Aug',
+      catchZh: '高原避暑胜地', catchJa: '高原の避暑地', catchEn: 'Highland Retreat',
+      mainImage: null },
+    { key: 'autumn', icon: '🍁', labelZh: '秋', labelJa: '秋', labelEn: 'Autumn',
+      periodZh: '9月〜11月', periodJa: '9月〜11月', periodEn: 'Sep – Nov',
+      catchZh: '红叶与美食', catchJa: '紅葉とグルメ', catchEn: 'Foliage & Gastronomy',
+      mainImage: null },
+    { key: 'winter', icon: '❄️', labelZh: '冬', labelJa: '冬', labelEn: 'Winter',
+      periodZh: '12月〜2月', periodJa: '12月〜2月', periodEn: 'Dec – Feb',
+      catchZh: '滑雪与温泉', catchJa: 'スキーと温泉', catchEn: 'Skiing & Onsen',
+      mainImage: null },
+  ]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // ─── Fetch layout, media and plans on mount ──────────────────────────────
@@ -136,6 +163,24 @@ export default function HomePage() {
         setSurroundingsImages((layout['home.surroundings'] ?? []).map(urlToItem));
         if (videos.length > 0) setVideoSrc(videos[0].url);
         setPlans(plansData);
+
+        // Fetch main image for each season
+        const seasonKeys = ['spring', 'summer', 'autumn', 'winter'] as const;
+        const seasonResults = await Promise.all(
+          seasonKeys.map((s) =>
+            fetch(`${apiBase}/seasons?season=${s}&public=1`)
+              .then((r) => r.ok ? r.json() : { spots: [] })
+              .catch(() => ({ spots: [] })),
+          ),
+        );
+        setSeasonCards((prev) => prev.map((card, i) => {
+          const spots = seasonResults[i]?.spots ?? [];
+          const firstWithImg = spots.find((s: any) => s.images?.length > 0);
+          const mainImg = firstWithImg
+            ? (firstWithImg.images.find((img: any) => img.isMain) ?? firstWithImg.images[0])?.imageUrl ?? null
+            : null;
+          return { ...card, mainImage: mainImg };
+        }));
       } catch {
         // Use placeholders when API is not available
       }
@@ -533,6 +578,87 @@ export default function HomePage() {
                 );
               })}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== 四季 SEASONS SECTION ===== */}
+      <section className="py-24 px-6 bg-white/2 border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          {/* Section header */}
+          <div className="text-center mb-16">
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="gold-line" />
+              <span className="text-gold text-[10px] tracking-[0.5em] font-display uppercase">Seasons</span>
+              <div className="gold-line" />
+            </div>
+            <h2 className="section-title mb-4">
+              {lang === 'zh' ? '轻井泽·四季皆精彩'
+                : lang === 'ja' ? '軽井沢、四季を楽しむ'
+                : 'Karuizawa, Beautiful in Every Season'}
+            </h2>
+            <div className="gold-divider w-48 mx-auto mb-6" />
+            <p className="section-subtitle max-w-2xl mx-auto">
+              {lang === 'zh'
+                ? 'Foresta Asama 是您探索轻井泽四季之美的最佳出发点'
+                : lang === 'ja'
+                ? 'Foresta Asamaは、四季折々の軽井沢を旅する最高の拠点です'
+                : 'Foresta Asama is your perfect base for exploring the seasonal beauty of Karuizawa'}
+            </p>
+          </div>
+
+          {/* 4 Season cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            {seasonCards.map((card) => {
+              const label  = lang === 'zh' ? card.labelZh  : lang === 'ja' ? card.labelJa  : card.labelEn;
+              const period = lang === 'zh' ? card.periodZh : lang === 'ja' ? card.periodJa : card.periodEn;
+              const catchCopy = lang === 'zh' ? card.catchZh : lang === 'ja' ? card.catchJa : card.catchEn;
+              return (
+                <Link
+                  key={card.key}
+                  href={`${base}/seasons`}
+                  className="luxury-card overflow-hidden group block"
+                >
+                  {/* Image or gradient */}
+                  <div className="relative aspect-[3/4] overflow-hidden bg-white/5">
+                    {card.mainImage ? (
+                      <Image
+                        src={card.mainImage}
+                        alt={label}
+                        fill unoptimized
+                        className="object-cover transition-transform duration-700 group-hover:scale-105 brightness-50"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-b from-gold/5 to-dark" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/30 to-transparent" />
+                    {/* Season icon + name overlay */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
+                      <span className="text-4xl mb-3">{card.icon}</span>
+                      <span className="font-display text-gold text-2xl font-bold tracking-widest uppercase">
+                        {label}
+                      </span>
+                      <span className="font-display text-white/40 text-[10px] tracking-widest mt-1">
+                        {period}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Card footer */}
+                  <div className="p-4 text-center">
+                    <p className="font-kaiti italic text-white/50 text-sm leading-relaxed">
+                      {catchCopy}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* CTA button */}
+          <div className="text-center">
+            <Link href={`${base}/seasons`} className="luxury-btn">
+              {lang === 'zh' ? '探索四季 →' : lang === 'ja' ? '四季を探る →' : 'Explore the Seasons →'}
+            </Link>
           </div>
         </div>
       </section>
