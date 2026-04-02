@@ -277,10 +277,10 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up delay-500">
-            <Link href={base + '/library'} className="luxury-btn">
+            <Link href="/library" className="luxury-btn">
               Explore the Villa
             </Link>
-            <Link href={base + '/plans'} className="luxury-btn-outline">
+            <Link href="/plans" className="luxury-btn-outline">
               Travel Plans
             </Link>
           </div>
@@ -341,7 +341,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <Link href={base + '/library'} className="luxury-btn-outline">
+              <Link href="/library" className="luxury-btn-outline">
                 {t(translations.common.view_all)}
               </Link>
             </div>
@@ -505,7 +505,7 @@ export default function HomePage() {
               return (
                 <Link
                   key={card.key}
-                  href={`${base}/seasons`}
+                  href="/seasons"
                   className="luxury-card overflow-hidden group block"
                 >
                   {/* Image or gradient */}
@@ -545,7 +545,7 @@ export default function HomePage() {
 
           {/* CTA button */}
           <div className="text-center">
-            <Link href={`${base}/seasons`} className="luxury-btn">
+            <Link href="/seasons" className="luxury-btn">
               {lang === 'zh' ? '探索四季 →' : lang === 'ja' ? '四季を探る →' : 'Explore the Seasons →'}
             </Link>
           </div>
@@ -615,7 +615,7 @@ export default function HomePage() {
           </div>
 
           <div className="text-center">
-            <Link href={base + '/plans'} className="luxury-btn-outline">
+            <Link href="/plans" className="luxury-btn-outline">
               {t(translations.common.view_all)}
             </Link>
           </div>
@@ -636,7 +636,7 @@ export default function HomePage() {
               <p className="font-kaiti italic text-white/60 text-lg leading-relaxed mb-8">
                 {t(translations.surroundings.karuizawa_intro)}
               </p>
-              <Link href={base + '/surroundings'} className="luxury-btn-outline">
+              <Link href="/surroundings" className="luxury-btn-outline">
                 {t(translations.common.view_all)}
               </Link>
             </div>

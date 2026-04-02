@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const basePath  = process.env.NEXT_PUBLIC_BASE_PATH || '';
-  const adminBase = basePath + '/admin';
-  const apiBase   = basePath + '/api';
+  const apiBase = (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/api';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -24,7 +22,7 @@ export default function AdminLoginPage() {
         body:    JSON.stringify({ username, password }),
       });
       if (res.ok) {
-        router.push(adminBase);
+        router.push('/admin');
       } else {
         const data = await res.json();
         setError(data.error || 'Invalid credentials');

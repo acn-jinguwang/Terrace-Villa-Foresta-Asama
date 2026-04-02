@@ -30,6 +30,36 @@ export async function GET(request: Request) {
   }
 }
 
+// POST /api/seasons/covers — register an existing gallery image as cover
+// Body: { season: string, imageUrl: string }
+export async function POST(request: Request) {
+  try {
+    const isTest = isTestReq(request);
+    await ensureSeasonCoversTable(isTest);
+    const db = getDb(isTest);
+    const { season, imageUrl } = await request.json();
+
+    if (!season || !ALL_SEASONS.includes(season as Season)) {
+      return NextResponse.json({ error: 'Invalid season' }, { status: 400 });
+    }
+    if (!imageUrl) {
+      return NextResponse.json({ error: 'imageUrl is required' }, { status: 400 });
+    }
+
+    await db.query(
+      `INSERT INTO season_covers (season, image_url, s3_key)
+       VALUES (?, ?, '')
+       ON DUPLICATE KEY UPDATE image_url = VALUES(image_url), s3_key = ''`,
+      [season, imageUrl],
+    );
+
+    return NextResponse.json({ season, imageUrl }, { headers: NO_CACHE });
+  } catch (err) {
+    console.error('[season_covers POST]', err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}
+
 // DELETE /api/seasons/covers?season=spring
 export async function DELETE(request: Request) {
   try {

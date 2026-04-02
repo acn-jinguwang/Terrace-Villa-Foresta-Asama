@@ -157,7 +157,7 @@ export default function PlanDetailPage() {
         <p className="text-white/40 font-kaiti italic text-center">
           {lang === 'zh' ? '未找到该行程方案' : lang === 'ja' ? 'プランが見つかりません' : 'The requested plan could not be found.'}
         </p>
-        <Link href={base + '/plans'} className="luxury-btn-outline">← Back to Plans</Link>
+        <Link href="/plans" className="luxury-btn-outline">← Back to Plans</Link>
       </div>
     );
   }
@@ -459,7 +459,7 @@ export default function PlanDetailPage() {
 
         {/* Back */}
         <div className="pt-8 border-t border-white/5 flex flex-wrap gap-3 sm:gap-4">
-          <Link href={base + '/plans'} className="luxury-btn-outline">
+          <Link href="/plans" className="luxury-btn-outline">
             ← Back
           </Link>
           <button className="luxury-btn" onClick={() => setContactOpen(true)}>

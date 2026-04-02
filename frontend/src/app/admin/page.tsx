@@ -171,9 +171,7 @@ const SECTION_MAX: Record<string, number> = {
 export default function AdminPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const basePath  = process.env.NEXT_PUBLIC_BASE_PATH || '';
-  const adminBase = basePath + '/admin';
-  const apiBase   = basePath + '/api';
+  const apiBase = (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/api';
 
   // ── Media state ──
   const [activeTab, setActiveTab]       = useState<Tab>('images');
@@ -274,6 +272,9 @@ export default function AdminPage() {
   const [seasonForm, setSeasonForm]         = useState<SeasonSpotAdmin>(blankSeason());
   const [seasonCovers, setSeasonCovers]     = useState<Record<string, string | null>>({ spring: null, summer: null, autumn: null, winter: null });
   const [coverUploading, setCoverUploading] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen]         = useState(false);
+  const [pickerCallback, setPickerCallback] = useState<((url: string) => Promise<void>) | null>(null);
+  const [pickerImages, setPickerImages]     = useState<MediaFile[] | null>(null);
 
   // ── Announcements state ──
   const blankAnnouncement = (): Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'> => ({
@@ -324,7 +325,7 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch(apiBase + '/auth/logout', { method: 'POST' });
-    router.push(adminBase + '/login');
+    router.push('/admin/login');
   };
 
   // ─── Load data ────────────────────────────────────────────────────────────
@@ -2906,6 +2907,7 @@ export default function AdminPage() {
           const sf = seasonForm;
 
           return (
+            <>
             <div className="space-y-6">
               {/* Season sub-tabs */}
               <div className="flex gap-0 border border-white/10">
@@ -2944,34 +2946,34 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        <label className="flex-1 px-2 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold font-display text-[9px] uppercase tracking-widest cursor-pointer text-center transition-colors">
-                          {seasonCovers[s] ? 'Change' : 'Upload'}
-                          <input type="file" accept="image/*" className="hidden"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              setCoverUploading(s);
-                              try {
-                                const fd = new FormData();
-                                fd.append('file', file);
-                                fd.append('season', s);
-                                const res = await fetch(`${apiBase}/seasons/covers/upload`, { method: 'POST', body: fd });
-                                if (res.ok) {
-                                  const d = await res.json();
-                                  setSeasonCovers((prev) => ({ ...prev, [s]: d.imageUrl }));
-                                  showMessage('success', `${SEASON_LABEL[s]} cover updated.`);
-                                } else {
-                                  showMessage('error', 'Upload failed.');
-                                }
-                              } catch {
-                                showMessage('error', 'Upload failed.');
-                              } finally {
-                                setCoverUploading(null);
-                                e.target.value = '';
+                        <button
+                          className="flex-1 px-2 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold font-display text-[9px] uppercase tracking-widest text-center transition-colors"
+                          onClick={() => {
+                            const season = s;
+                            setPickerCallback(() => async (url: string) => {
+                              const res = await fetch(`${apiBase}/seasons/covers`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ season, imageUrl: url }),
+                              });
+                              if (res.ok) {
+                                setSeasonCovers((prev) => ({ ...prev, [season]: url }));
+                                showMessage('success', `${SEASON_LABEL[season]} cover updated.`);
+                              } else {
+                                showMessage('error', 'Failed.');
                               }
-                            }}
-                          />
-                        </label>
+                            });
+                            if (!pickerImages) {
+                              fetch(apiBase + '/media/images')
+                                .then((r) => r.ok ? r.json() : [])
+                                .then((imgs: MediaFile[]) => setPickerImages(imgs.filter((f) => f.type === 'image')))
+                                .catch(() => setPickerImages([]));
+                            }
+                            setPickerOpen(true);
+                          }}
+                        >
+                          {seasonCovers[s] ? 'Change' : 'Select'}
+                        </button>
                         {seasonCovers[s] && (
                           <button
                             className="px-2 py-1.5 border border-red-500/30 text-red-400/70 hover:text-red-400 font-display text-[9px] uppercase tracking-widest transition-colors"
@@ -3119,11 +3121,37 @@ export default function AdminPage() {
                                 <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">
                                   Images ({spot.images.length})
                                 </label>
-                                <label className={`cursor-pointer px-3 py-1 border border-gold/30 font-display text-[10px] uppercase tracking-widest text-gold/60 hover:text-gold hover:border-gold/60 transition-colors ${seasonUploading ? 'opacity-50 pointer-events-none' : ''}`}>
-                                  {seasonUploading ? 'Uploading...' : '+ Upload Image'}
-                                  <input type="file" accept="image/*" className="hidden"
-                                    onChange={(e) => handleImageUpload(e, spot.id!)} />
-                                </label>
+                                <button
+                                  className="px-3 py-1 border border-gold/30 font-display text-[10px] uppercase tracking-widest text-gold/60 hover:text-gold hover:border-gold/60 transition-colors"
+                                  onClick={() => {
+                                    const spotId = spot.id!;
+                                    const isFirst = spot.images.length === 0;
+                                    setPickerCallback(() => async (url: string) => {
+                                      const res = await fetch(`${apiBase}/seasons/${spotId}/images/select`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ imageUrl: url, isMain: isFirst }),
+                                      });
+                                      if (res.ok) {
+                                        const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
+                                        setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
+                                        if (seasonForm.id === spotId) setSeasonForm(updated);
+                                        showMessage('success', 'Image added.');
+                                      } else {
+                                        showMessage('error', 'Failed.');
+                                      }
+                                    });
+                                    if (!pickerImages) {
+                                      fetch(apiBase + '/media/images')
+                                        .then((r) => r.ok ? r.json() : [])
+                                        .then((imgs: MediaFile[]) => setPickerImages(imgs.filter((f) => f.type === 'image')))
+                                        .catch(() => setPickerImages([]));
+                                    }
+                                    setPickerOpen(true);
+                                  }}
+                                >
+                                  + Select from Gallery
+                                </button>
                               </div>
                               {spot.images.length > 0 && (
                                 <div className="grid grid-cols-4 gap-2">
@@ -3226,6 +3254,41 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Image Picker Modal ── */}
+            {pickerOpen && (
+              <div className="fixed inset-0 bg-black/95 z-[200] flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+                  <h3 className="font-display text-gold text-xs uppercase tracking-widest">Select Image from Gallery</h3>
+                  <button onClick={() => setPickerOpen(false)} className="text-white/40 hover:text-gold text-xl leading-none">✕</button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6">
+                  {!pickerImages ? (
+                    <p className="text-white/30 text-xs font-display uppercase tracking-widest">Loading…</p>
+                  ) : pickerImages.length === 0 ? (
+                    <p className="text-white/30 text-xs font-display uppercase tracking-widest">No images in gallery yet. Upload images in the Images tab first.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {pickerImages.map((img) => (
+                        <button
+                          key={img.id}
+                          className="relative aspect-square border border-white/10 hover:border-gold overflow-hidden group transition-colors"
+                          onClick={async () => {
+                            setPickerOpen(false);
+                            if (pickerCallback) await pickerCallback(img.url);
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            </>
           );
         })()}
 

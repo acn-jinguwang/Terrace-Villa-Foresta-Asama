@@ -259,7 +259,7 @@ export default function SeasonsPage() {
 
       {/* ── Back to top CTA ── */}
       <section className="py-16 px-6 border-t border-white/5 text-center">
-        <Link href={base || '/'} className="luxury-btn-outline">
+        <Link href="/" className="luxury-btn-outline">
           {lang === 'zh' ? '返回首页' : lang === 'ja' ? 'トップへ戻る' : 'Back to Top'}
         </Link>
       </section>

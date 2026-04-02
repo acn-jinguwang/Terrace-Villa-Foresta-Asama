@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
@@ -148,9 +149,9 @@ export default function LibraryPage() {
               <p className="font-kaiti italic text-white/20 mb-4">
                 {lang === 'zh' ? '暂无图片' : lang === 'ja' ? '画像がありません' : 'No images yet'}
               </p>
-              <a href={base + '/admin'} className="text-gold/40 hover:text-gold text-[10px] font-display uppercase tracking-widest transition-colors duration-300">
+              <Link href="/admin" className="text-gold/40 hover:text-gold text-[10px] font-display uppercase tracking-widest transition-colors duration-300">
                 {lang === 'zh' ? '前往管理画面上传' : lang === 'ja' ? '管理画面でアップロード' : 'Upload via Admin →'}
-              </a>
+              </Link>
             </div>
           ) : (
             <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4">
