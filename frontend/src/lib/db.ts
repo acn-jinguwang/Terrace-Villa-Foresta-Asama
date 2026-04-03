@@ -45,7 +45,7 @@ export async function runMigration(isTest = false): Promise<void> {
       s3_key      VARCHAR(1024),
       type        VARCHAR(50)   DEFAULT 'image',
       category    VARCHAR(100)  DEFAULT '',
-      size        BIGINT        DEFAULT 0,
+      size        VARCHAR(50)   DEFAULT '',
       upload_date DATETIME      DEFAULT CURRENT_TIMESTAMP,
       is_hero     TINYINT(1)    DEFAULT 0,
       sort_order  INT           DEFAULT 0,
@@ -177,6 +177,11 @@ export async function runMigration(isTest = false): Promise<void> {
   for (const sql of tables) {
     await db.query(sql);
   }
+
+  // Fix media.size column: BIGINT → VARCHAR(50) (code stores formatted strings like "1.5 MB")
+  await db.query(
+    `ALTER TABLE media MODIFY COLUMN size VARCHAR(50) DEFAULT ''`,
+  ).catch(() => {}); // ignore if already correct type
 
   // Extend plan_budget_items with per-language amount/currency columns
   const budgetCols: [string, string][] = [
