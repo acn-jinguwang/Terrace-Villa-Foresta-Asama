@@ -3,8 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
+import { useHeroEntrance } from '@/hooks/useHeroEntrance';
+import { useImageReveal } from '@/hooks/useImageReveal';
+import { useStaggerImageReveal } from '@/hooks/useStaggerImageReveal';
+import { useCountUp } from '@/hooks/useCountUp';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface MediaItem {
   id: string;
@@ -36,7 +44,6 @@ interface SeasonCard {
   mainImage: string | null;
 }
 
-// Placeholder gradient backgrounds shown when no images are uploaded yet
 const heroGradients = [
   'from-[#0a0a0a] via-[#1a1208] to-[#0a0a0a]',
   'from-[#050505] via-[#0d1a0d] to-[#050505]',
@@ -82,7 +89,6 @@ const featureItems = [
   },
 ];
 
-// ─── Placeholder slide shown when hero has no images ─────────────────────────
 function PlaceholderSlide({ gradientClass }: { gradientClass: string }) {
   return (
     <div className={`w-full h-full bg-gradient-to-br ${gradientClass} flex items-center justify-center`}>
@@ -101,7 +107,6 @@ function PlaceholderSlide({ gradientClass }: { gradientClass: string }) {
   );
 }
 
-// ─── Placeholder image cell ───────────────────────────────────────────────────
 function PlaceholderCell({ label }: { label: string }) {
   return (
     <div className="w-full h-full bg-gradient-to-br from-white/5 to-white/2 flex items-center justify-center">
@@ -141,7 +146,83 @@ export default function HomePage() {
   ]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // ─── Fetch layout, media and plans on mount ──────────────────────────────
+  // ─── Hero animations ────────────────────────────────────────────────────────
+  const entrance = useHeroEntrance();
+  const heroContainerRef = useRef<HTMLDivElement>(null);
+
+  // Hero parallax applied to all slide images
+  useEffect(() => {
+    const container = heroContainerRef.current;
+    if (!container) return;
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    const scaleFrom = isMobile ? 1.04 : 1.08;
+    const yPercentFrom = isMobile ? 3 : 6;
+    const yPercentTo = isMobile ? -3 : -6;
+
+    const images = container.querySelectorAll('.hero-slide-img');
+    gsap.set(images, { scale: scaleFrom, yPercent: yPercentFrom });
+
+    const trigger = ScrollTrigger.create({
+      trigger: container,
+      start: 'top top',
+      end: 'bottom top',
+      scrub: true,
+      onUpdate: (self) => {
+        const p = self.progress;
+        gsap.set(images, {
+          scale: scaleFrom - p * (scaleFrom - 1),
+          yPercent: yPercentFrom - p * (yPercentFrom - yPercentTo),
+        });
+      },
+    });
+
+    return () => trigger.kill();
+  }, []);
+
+  // ─── Feature cards stagger reveal ──────────────────────────────────────────
+  const featuresRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = featuresRef.current;
+    if (!el) return;
+    const cards = el.querySelectorAll('.feature-card');
+    gsap.set(cards, { opacity: 0, y: 40 });
+    const trigger = ScrollTrigger.create({
+      trigger: el,
+      start: 'top 80%',
+      once: true,
+      onEnter: () => {
+        gsap.to(cards, { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: 'power2.out' });
+      },
+    });
+    return () => trigger.kill();
+  }, []);
+
+  // ─── Season cards stagger reveal ───────────────────────────────────────────
+  const seasonsGridRef = useStaggerImageReveal<HTMLDivElement>({
+    selector: '.season-card-img',
+    scaleFrom: 0.94,
+    stagger: 0.12,
+  });
+
+  // ─── Plans cards stagger reveal ────────────────────────────────────────────
+  const plansGridRef = useStaggerImageReveal<HTMLDivElement>({
+    selector: '.plan-card-img',
+    scaleFrom: 0.94,
+    stagger: 0.1,
+  });
+
+  // ─── About images reveal ───────────────────────────────────────────────────
+  const hotelImg0Ref = useImageReveal<HTMLDivElement>({ scaleFrom: 0.94 });
+  const hotelImg1Ref = useImageReveal<HTMLDivElement>({ scaleFrom: 0.94 });
+  const hotelImg2Ref = useImageReveal<HTMLDivElement>({ scaleFrom: 0.94 });
+
+  // ─── CountUp for stats ─────────────────────────────────────────────────────
+  const stat0Ref = useCountUp(4, 1.8);
+  const stat1Ref = useCountUp(1000, 1.8, 'm');
+  const stat2Ref = useCountUp(24, 1.8, 'h');
+
+  // ─── Fetch layout, media and plans on mount ─────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -156,7 +237,6 @@ export default function HomePage() {
         const videos: MediaItem[]   = videoRes.ok  ? await videoRes.json()  : [];
         const plansData: PlanEntry[] = plansRes.ok ? await plansRes.json()  : [];
 
-        // Map layout URL arrays to MediaItem objects
         const urlToItem = (url: string) => allImgs.find((img) => img.url === url) ?? { id: url, url, name: '', type: 'image' as const, category: '' };
         setHeroImages((layout['home.hero'] ?? []).map(urlToItem));
         setHotelImages((layout['home.hotel'] ?? []).map(urlToItem));
@@ -164,7 +244,6 @@ export default function HomePage() {
         if (videos.length > 0) setVideoSrc(videos[0].url);
         setPlans(plansData);
 
-        // Fetch season cover images (set from Admin) — fall back to first spot image
         const coversRes: Record<string, string | null> = await fetch(`${apiBase}/seasons/covers`).then((r) => r.ok ? r.json() : {}).catch(() => ({}));
         const seasonKeys = ['spring', 'summer', 'autumn', 'winter'] as const;
         const seasonResults = await Promise.all(
@@ -175,7 +254,6 @@ export default function HomePage() {
           ),
         );
         setSeasonCards((prev) => prev.map((card, i) => {
-          // Prefer admin-set cover image; fall back to first spot image
           const coverUrl = coversRes[card.key] ?? null;
           if (coverUrl) return { ...card, mainImage: coverUrl };
           const spots = seasonResults[i]?.spots ?? [];
@@ -201,7 +279,6 @@ export default function HomePage() {
     return () => clearInterval(timer);
   }, [slideCount]);
 
-  // ─── Helpers ───────────────────────────────────────────────────────────────
   const getHotelImage = (idx: number) =>
     hotelImages.length > idx ? hotelImages[idx] : null;
 
@@ -219,7 +296,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-dark">
       {/* ===== HERO SECTION ===== */}
-      <section className="relative h-screen w-full overflow-hidden">
+      <section ref={heroContainerRef} className="relative h-screen w-full overflow-hidden">
         {/* Slideshow */}
         {slides.map((slide, idx) => (
           <div
@@ -229,19 +306,18 @@ export default function HomePage() {
             }`}
           >
             {'url' in slide ? (
-              /* Uploaded image */
               <div className="relative w-full h-full">
                 <Image
                   src={(slide as MediaItem).url}
                   alt={`Terrace Villa Foresta Asama ${idx + 1}`}
                   fill
                   unoptimized
-                  className="object-cover brightness-50 animate-kenburns"
+                  className="object-cover brightness-50 hero-slide-img"
+                  style={{ willChange: 'transform' }}
                   priority={idx === 0}
                 />
               </div>
             ) : (
-              /* Gradient placeholder */
               <PlaceholderSlide gradientClass={(slide as { gradient: string }).gradient} />
             )}
           </div>
@@ -252,31 +328,31 @@ export default function HomePage() {
 
         {/* Hero Content */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4 sm:px-6 pt-20">
-          <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
-            <div className="gold-line" />
+          <p ref={entrance.eyebrowRef} className="flex items-center gap-4 mb-6" style={{ opacity: 0 }}>
+            <span className="gold-line" />
             <span className="text-gold text-xs tracking-[0.6em] font-display uppercase">
               Karuizawa · Japan
             </span>
-            <div className="gold-line" />
-          </div>
+            <span className="gold-line" />
+          </p>
 
-          <h1 className="font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-4 uppercase animate-fade-in-up delay-100">
+          <h1 ref={entrance.titleRef} className="font-display text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-4 uppercase">
             Terrace Villa
           </h1>
-          <h2 className="font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gold tracking-widest mb-8 uppercase animate-fade-in-up delay-200">
+          <h2 ref={entrance.subtitleRef} className="font-display text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-bold text-gold tracking-widest mb-8 uppercase">
             Foresta Asama
           </h2>
 
-          <div className="gold-divider w-64 mb-8 animate-fade-in-up delay-200" />
+          <div className="gold-divider w-64 mb-8" />
 
-          <p className="font-kaiti italic text-gold-light text-lg md:text-xl leading-relaxed max-w-2xl mb-4 animate-fade-in-up delay-300">
+          <p ref={entrance.descRef} className="font-kaiti italic text-gold-light text-lg md:text-xl leading-relaxed max-w-2xl mb-4" style={{ opacity: 0 }}>
             {t(translations.top.tagline)}
           </p>
-          <p className="font-kaiti italic text-white/50 text-base leading-relaxed max-w-xl mb-10 animate-fade-in-up delay-400">
+          <p ref={entrance.desc2Ref} className="font-kaiti italic text-white/50 text-base leading-relaxed max-w-xl mb-10" style={{ opacity: 0 }}>
             {t(translations.top.subtitle)}
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up delay-500">
+          <div ref={entrance.ctaRef} className="flex flex-col sm:flex-row gap-4 hero-cta" style={{ opacity: 0 }}>
             <Link href="/library" className="luxury-btn">
               Explore the Villa
             </Link>
@@ -300,11 +376,9 @@ export default function HomePage() {
         </div>
 
         {/* Scroll Indicator */}
-        <div className="absolute bottom-8 right-8 hidden sm:flex flex-col items-center gap-2 text-white/20">
-          <div className="writing-vertical-rl text-[10px] tracking-[0.4em] font-display uppercase">
-            Scroll
-          </div>
-          <div className="w-[1px] h-12 bg-gradient-to-b from-white/20 to-transparent animate-bounce" />
+        <div ref={entrance.scrollRef} className="scroll-indicator" style={{ opacity: 0 }}>
+          <span className="scroll-text">Scroll</span>
+          <div className="scroll-line" />
         </div>
       </section>
 
@@ -328,12 +402,12 @@ export default function HomePage() {
 
               <div className="grid grid-cols-3 gap-6 mb-10">
                 {[
-                  { num: '4',      label: { zh: '独立别墅', ja: '独立ヴィラ',  en: 'Private Villas' } },
-                  { num: '1,000m', label: { zh: '海拔高度', ja: '標高',        en: 'Elevation' } },
-                  { num: '24h',    label: { zh: '管家服务', ja: 'バトラー',     en: 'Butler Service' } },
+                  { num: 4,    suffix: '',  label: { zh: '独立别墅', ja: '独立ヴィラ',  en: 'Private Villas' }, ref: stat0Ref },
+                  { num: 1000, suffix: 'm', label: { zh: '海拔高度', ja: '標高',        en: 'Elevation' },      ref: stat1Ref },
+                  { num: 24,   suffix: 'h', label: { zh: '管家服务', ja: 'バトラー',     en: 'Butler Service' }, ref: stat2Ref },
                 ].map((stat, idx) => (
                   <div key={idx} className="text-center border border-white/5 p-4">
-                    <div className="font-display text-2xl font-bold text-gold mb-1">{stat.num}</div>
+                    <div ref={stat.ref as React.RefObject<HTMLDivElement>} className="font-display text-2xl font-bold text-gold mb-1">0</div>
                     <div className="font-kaiti italic text-white/40 text-xs leading-relaxed">
                       {t(stat.label)}
                     </div>
@@ -346,46 +420,41 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Image Grid — shows uploaded hotel images or placeholders */}
+            {/* Image Grid — scroll reveal */}
             <div className="grid grid-cols-2 gap-4">
-              {/* Left tall image */}
-              <div className="relative aspect-[3/4] overflow-hidden border border-white/10">
+              <div ref={hotelImg0Ref} className="relative aspect-[3/4] overflow-hidden border border-white/10 about-img-area">
                 {getHotelImage(0) ? (
                   <Image
                     src={getHotelImage(0)!.url}
                     alt={getHotelImage(0)!.name}
-                    fill
-                    unoptimized
-                    className="object-cover animate-kenburns"
+                    fill unoptimized
+                    className="object-cover about-img active"
                   />
                 ) : (
                   <PlaceholderCell label="Interior" />
                 )}
               </div>
 
-              {/* Right: two stacked images */}
               <div className="grid grid-rows-2 gap-4">
-                <div className="relative aspect-square overflow-hidden border border-white/10">
+                <div ref={hotelImg1Ref} className="relative aspect-square overflow-hidden border border-white/10 about-img-area">
                   {getHotelImage(1) ? (
                     <Image
                       src={getHotelImage(1)!.url}
                       alt={getHotelImage(1)!.name}
-                      fill
-                      unoptimized
-                      className="object-cover animate-kenburns-reverse"
+                      fill unoptimized
+                      className="object-cover about-img active"
                     />
                   ) : (
                     <PlaceholderCell label="Terrace" />
                   )}
                 </div>
-                <div className="relative aspect-square overflow-hidden border border-white/10">
+                <div ref={hotelImg2Ref} className="relative aspect-square overflow-hidden border border-white/10 about-img-area">
                   {getHotelImage(2) ? (
                     <Image
                       src={getHotelImage(2)!.url}
                       alt={getHotelImage(2)!.name}
-                      fill
-                      unoptimized
-                      className="object-cover animate-kenburns"
+                      fill unoptimized
+                      className="object-cover about-img active"
                     />
                   ) : (
                     <PlaceholderCell label="Asama" />
@@ -400,13 +469,13 @@ export default function HomePage() {
       {/* ===== FEATURES SECTION ===== */}
       <section className="py-16 px-6 bg-white/2 border-y border-white/5">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div ref={featuresRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {featureItems.map((item) => {
               const featureData = translations.top.features[item.key as keyof typeof translations.top.features];
               return (
                 <div
                   key={item.key}
-                  className="flex flex-col items-center text-center p-8 border border-white/5 hover:border-gold/20 transition-all duration-500 group"
+                  className="feature-card flex flex-col items-center text-center p-8 border border-white/5 hover:border-gold/20 transition-all duration-500 group"
                 >
                   <div className="text-gold/60 group-hover:text-gold mb-4 transition-colors duration-300">
                     {item.icon}
@@ -455,7 +524,6 @@ export default function HomePage() {
                 <source src={videoSrc} type="video/webm" />
               </video>
             ) : (
-              /* Placeholder when no video is uploaded */
               <div className="absolute inset-0 bg-gradient-to-br from-dark to-dark-secondary flex items-center justify-center">
                 <div className="text-center">
                   <div className="w-20 h-20 border border-gold/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -476,7 +544,6 @@ export default function HomePage() {
       {/* ===== 四季 SEASONS SECTION ===== */}
       <section className="py-24 px-6 bg-white/2 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
-          {/* Section header */}
           <div className="text-center mb-16">
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="gold-line" />
@@ -497,7 +564,7 @@ export default function HomePage() {
           </div>
 
           {/* 4 Season cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div ref={seasonsGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {seasonCards.map((card) => {
               const label  = lang === 'zh' ? card.labelZh  : lang === 'ja' ? card.labelJa  : card.labelEn;
               const period = lang === 'zh' ? card.periodZh : lang === 'ja' ? card.periodJa : card.periodEn;
@@ -506,22 +573,21 @@ export default function HomePage() {
                 <Link
                   key={card.key}
                   href="/seasons"
-                  className="luxury-card overflow-hidden group block"
+                  className="luxury-card season-card overflow-hidden group block"
                 >
-                  {/* Image or gradient */}
                   <div className="relative aspect-[3/4] overflow-hidden bg-white/5">
                     {card.mainImage ? (
                       <Image
                         src={card.mainImage}
                         alt={label}
                         fill unoptimized
-                        className="object-cover transition-transform duration-700 group-hover:scale-105 brightness-50"
+                        className="object-cover season-card-img brightness-50"
+                        style={{ transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
                       />
                     ) : (
                       <div className="absolute inset-0 bg-gradient-to-b from-gold/5 to-dark" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/30 to-transparent" />
-                    {/* Season icon + name overlay */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-4">
                       <span className="text-4xl mb-3">{card.icon}</span>
                       <span className="font-display text-gold text-2xl font-bold tracking-widest uppercase">
@@ -532,7 +598,6 @@ export default function HomePage() {
                       </span>
                     </div>
                   </div>
-                  {/* Card footer */}
                   <div className="p-4 text-center">
                     <p className="font-kaiti italic text-white/50 text-sm leading-relaxed">
                       {catchCopy}
@@ -543,7 +608,6 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* CTA button */}
           <div className="text-center">
             <Link href="/seasons" className="luxury-btn">
               {lang === 'zh' ? '探索四季 →' : lang === 'ja' ? '四季を探る →' : 'Explore the Seasons →'}
@@ -568,19 +632,19 @@ export default function HomePage() {
             <p className="section-subtitle max-w-xl mx-auto">{t(translations.plans.subtitle)}</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+          <div ref={plansGridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {plans.slice(0, 3).map((plan) => {
               const tag = getPlanTag(plan);
               const coverSrc = plan.coverImage || `/images/plans/${plan.id}.jpg`;
               return (
-                <Link href={`/plans/${plan.id}`} key={plan.id} className="luxury-card group block overflow-hidden">
+                <Link href={`/plans/${plan.id}`} key={plan.id} className="luxury-card plan-card group block overflow-hidden">
                   <div className="relative aspect-[4/3] overflow-hidden bg-white/5">
                     <Image
                       src={coverSrc}
                       alt={getPlanTitle(plan)}
-                      fill
-                      unoptimized
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      fill unoptimized
+                      className="object-cover plan-card-img"
+                      style={{ transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)' }}
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-dark/80 to-transparent" />
@@ -647,10 +711,10 @@ export default function HomePage() {
                 return (
                   <div
                     key={cat}
-                    className="relative aspect-square overflow-hidden bg-white/5 border border-white/5 hover:border-gold/20 transition-all duration-500 flex items-center justify-center group cursor-pointer"
+                    className="relative aspect-square overflow-hidden bg-white/5 border border-white/5 hover:border-gold/20 transition-all duration-500 flex items-center justify-center group cursor-pointer spot-card"
                   >
                     {img ? (
-                      <Image src={img.url} alt={cat} fill unoptimized className="object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
+                      <Image src={img.url} alt={cat} fill unoptimized className="object-cover opacity-40 group-hover:opacity-60 spot-card-img transition-opacity duration-300" style={{ transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s' }} />
                     ) : null}
                     <div className="relative text-center p-4">
                       <div className="text-white/40 group-hover:text-gold/60 font-display text-xs uppercase tracking-widest transition-colors duration-300">

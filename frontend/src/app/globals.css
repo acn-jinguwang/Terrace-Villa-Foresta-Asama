@@ -125,6 +125,176 @@
   }
 }
 
+/* ─── UI Upgrade: Section spacing ─────────────────────────────────────────── */
+:root {
+  --section-pad: clamp(80px, 12vw, 140px);
+}
+
+/* ─── UI Upgrade: Scroll indicator ────────────────────────────────────────── */
+.scroll-indicator {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.scroll-text {
+  font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: rgba(250,248,242,0.18);
+  font-family: 'Cinzel', serif;
+}
+.scroll-line {
+  width: 1px; height: 40px; background: rgba(250,248,242,0.18);
+  position: relative; overflow: hidden;
+}
+.scroll-line::after {
+  content: ''; position: absolute; top: -100%; left: 0;
+  width: 1px; height: 100%; background: #c9a96e;
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0% { top: -100%; }
+  50% { top: 100%; }
+  100% { top: 100%; }
+}
+
+/* ─── UI Upgrade: Nav blur + hover underline ───────────────────────────────── */
+.nav-scrolled {
+  background: rgba(22,21,16,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.nav-links .nav-link {
+  position: relative;
+  padding-bottom: 4px;
+}
+.nav-links .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  width: 0; height: 1px;
+  background: #c9a96e;
+  transition: width 0.35s cubic-bezier(0.25,0.46,0.45,0.94),
+              left 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.nav-links .nav-link:hover::after {
+  width: 100%; left: 0;
+}
+
+/* ─── UI Upgrade: Hamburger button ────────────────────────────────────────── */
+.hamburger {
+  display: none;
+  flex-direction: column; gap: 5px;
+  background: none; border: none; padding: 10px;
+  cursor: pointer; z-index: 62;
+}
+.hamburger span {
+  display: block; width: 22px; height: 1.5px;
+  background: #faf8f2;
+  transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.25s;
+  transform-origin: center;
+}
+.hamburger.active span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.hamburger.active span:nth-child(2) { opacity: 0; }
+.hamburger.active span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* ─── UI Upgrade: Mobile menu overlay ─────────────────────────────────────── */
+.mobile-menu {
+  position: fixed; inset: 0; z-index: 60;
+  background: #161510;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 28px;
+  transform: translateX(100%);
+  transition: transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.mobile-menu.open { transform: translateX(0); }
+.mobile-menu .nav-link {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(22px, 6vw, 32px);
+  font-weight: 300; color: rgba(250,248,242,0.35);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none;
+  transition: color 0.3s;
+  background: none; border: none; cursor: pointer;
+}
+.mobile-menu .nav-link:hover { color: #c9a96e; }
+
+@media (max-width: 768px) {
+  .hamburger { display: flex; }
+}
+
+/* ─── UI Upgrade: Image hover zoom ────────────────────────────────────────── */
+.season-card-img,
+.plan-card-img,
+.spot-card-img,
+.about-img {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.season-card:hover .season-card-img { transform: scale(1.08); }
+.plan-card:hover .plan-card-img { transform: scale(1.06); }
+.spot-card:hover .spot-card-img { transform: scale(1.06); }
+.about-img-area:hover .about-img.active { transform: scale(1.04); }
+
+/* ─── UI Upgrade: Button + card hover micro-interaction ───────────────────── */
+.luxury-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(201,169,110,0.2);
+}
+.luxury-btn-outline:hover {
+  transform: translateY(-2px);
+}
+.feature-card:hover {
+  border-color: rgba(201,169,110,0.35) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+.season-card:hover,
+.plan-card:hover {
+  border-color: rgba(201,169,110,0.35) !important;
+  transform: translateY(-4px);
+}
+
+/* ─── UI Upgrade: Footer watermark ────────────────────────────────────────── */
+.footer-watermark {
+  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-size: clamp(80px, 14vw, 180px);
+  font-weight: 300; text-transform: uppercase;
+  color: #faf8f2; opacity: 0.025;
+  white-space: nowrap; pointer-events: none;
+  letter-spacing: 0.08em;
+}
+
+/* ─── UI Upgrade: Mobile responsive ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  :root {
+    --section-pad: clamp(56px, 10vw, 80px);
+  }
+
+  .hero-cta { flex-direction: column; align-items: center; gap: 12px; }
+  .hero-cta .luxury-btn,
+  .hero-cta .luxury-btn-outline { width: 100%; max-width: 280px; text-align: center; }
+
+  .luxury-btn:hover,
+  .luxury-btn-outline:hover,
+  .feature-card:hover,
+  .season-card:hover,
+  .plan-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .footer-watermark { font-size: clamp(48px, 12vw, 80px); }
+}
+
+@media (hover: none) {
+  .about-img-area .about-img.active { transform: none !important; }
+  .season-card:active { border-color: #c9a96e; }
+  .plan-card:active { border-color: rgba(201,169,110,0.35); }
+}
+
+@media (max-width: 375px) {
+  .nav-logo { font-size: 12px; }
+}
+
 /* Ken Burns Animation */
 @keyframes kenburns {
   0% { transform: scale(1); }

@@ -26,7 +26,8 @@ export default function Footer() {
   }, []);
 
   return (
-    <footer className="bg-dark-tertiary border-t border-white/5 mt-24">
+    <footer className="bg-dark-tertiary border-t border-white/5 mt-24" style={{ position: 'relative', overflow: 'hidden' }}>
+      <div className="footer-watermark">Foresta Asama</div>
       <div className="max-w-7xl mx-auto px-6 py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           {/* Brand */}

@@ -4,6 +4,7 @@ import { LanguageProvider } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AnnouncementBanner from '@/components/AnnouncementBanner';
+import RootLayoutClient from '@/components/RootLayoutClient';
 
 export const metadata: Metadata = {
   title: 'Terrace Villa Foresta Asama | Karuizawa Luxury Resort',
@@ -32,10 +33,12 @@ export default function RootLayout({
       </head>
       <body>
         <LanguageProvider>
-          <AnnouncementBanner />
-          <Header />
-          <main>{children}</main>
-          <Footer />
+          <RootLayoutClient>
+            <AnnouncementBanner />
+            <Header />
+            <main>{children}</main>
+            <Footer />
+          </RootLayoutClient>
         </LanguageProvider>
       </body>
     </html>
