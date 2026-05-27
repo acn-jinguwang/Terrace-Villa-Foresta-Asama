@@ -1,46 +1,16 @@
-# ---- Stage 1: Build ----
-FROM public.ecr.aws/docker/library/node:20-alpine AS builder
-
+# ---- build stage ----
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# NEXT_PUBLIC_BASE_PATH: /test for test env, empty for prod (must be declared in builder stage)
-ARG NEXT_PUBLIC_BASE_PATH
-ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
-
-# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
-
-# Copy source and build
+RUN npm ci --no-audit --no-fund
 COPY . .
-RUN npm run build
+ARG VITE_BASE=/
+RUN VITE_BASE=${VITE_BASE} npm run build
 
-# ---- Stage 2: Production ----
-FROM public.ecr.aws/docker/library/node:20-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-# TEST_MODE: injected at build time for test deployments (cicd-test.yml)
-ARG TEST_MODE
-ENV TEST_MODE=$TEST_MODE
-
-# NEXT_PUBLIC_BASE_PATH: /test for test env, empty for prod
-ARG NEXT_PUBLIC_BASE_PATH
-ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
-
-# Copy built artifacts
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-
-# Data directory (JSON files, uploads)
-COPY --from=builder /app/data ./data
-
+# ---- runtime stage ----
+FROM nginx:1.27-alpine AS runtime
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-
-ENV PORT=80
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
+CMD ["nginx", "-g", "daemon off;"]
