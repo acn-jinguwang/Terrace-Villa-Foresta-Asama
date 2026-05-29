@@ -9,8 +9,9 @@ RUN VITE_BASE=${VITE_BASE} npm run build
 
 # ---- runtime stage ----
 FROM public.ecr.aws/docker/library/nginx:1.27-alpine AS runtime
+ARG VITE_BASE=/
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html${VITE_BASE}
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
