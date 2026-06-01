@@ -602,3 +602,469 @@ export async function ensureAnnouncementsTable(isTest = false): Promise<void> {
   const db = getDb(isTest);
   await db.query(ANNOUNCEMENTS_DDL);
 }
+
+// ─── v3 Redesign Tables ───────────────────────────────────────────────────────
+
+const V3_DDL = [
+  `CREATE TABLE IF NOT EXISTS site_settings (
+    setting_key VARCHAR(64) PRIMARY KEY,
+    value_zh    TEXT,
+    value_ja    TEXT,
+    value_en    TEXT,
+    value_raw   TEXT,
+    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS hero_section (
+    id                  INT PRIMARY KEY DEFAULT 1,
+    background_image_url VARCHAR(500) DEFAULT '',
+    eyebrow_zh          VARCHAR(200) DEFAULT '',
+    eyebrow_ja          VARCHAR(200) DEFAULT '',
+    eyebrow_en          VARCHAR(200) DEFAULT '',
+    title_line1_zh      VARCHAR(200) DEFAULT '',
+    title_line1_ja      VARCHAR(200) DEFAULT '',
+    title_line1_en      VARCHAR(200) DEFAULT '',
+    title_line2_zh      VARCHAR(200) DEFAULT '',
+    title_line2_ja      VARCHAR(200) DEFAULT '',
+    title_line2_en      VARCHAR(200) DEFAULT '',
+    subtitle_zh         TEXT,
+    subtitle_ja         TEXT,
+    subtitle_en         TEXT,
+    updated_at          DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS hero_stats (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    display_order INT DEFAULT 0,
+    value_text    VARCHAR(64) DEFAULT '',
+    label_zh      VARCHAR(100) DEFAULT '',
+    label_ja      VARCHAR(100) DEFAULT '',
+    label_en      VARCHAR(100) DEFAULT '',
+    is_enabled    TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS flow_section (
+    id         INT PRIMARY KEY DEFAULT 1,
+    eyebrow_zh VARCHAR(200) DEFAULT '',
+    eyebrow_ja VARCHAR(200) DEFAULT '',
+    eyebrow_en VARCHAR(200) DEFAULT '',
+    title_zh   VARCHAR(200) DEFAULT '',
+    title_ja   VARCHAR(200) DEFAULT '',
+    title_en   VARCHAR(200) DEFAULT '',
+    subtitle_zh TEXT,
+    subtitle_ja TEXT,
+    subtitle_en TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS flow_steps (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    step_number     INT DEFAULT 0,
+    step_label_zh   VARCHAR(100) DEFAULT '',
+    step_label_ja   VARCHAR(100) DEFAULT '',
+    step_label_en   VARCHAR(100) DEFAULT '',
+    title_zh        VARCHAR(200) DEFAULT '',
+    title_ja        VARCHAR(200) DEFAULT '',
+    title_en        VARCHAR(200) DEFAULT '',
+    description_zh  TEXT,
+    description_ja  TEXT,
+    description_en  TEXT,
+    cta_label_zh    VARCHAR(100) DEFAULT '',
+    cta_label_ja    VARCHAR(100) DEFAULT '',
+    cta_label_en    VARCHAR(100) DEFAULT '',
+    cta_url         VARCHAR(500) DEFAULT '',
+    is_external     TINYINT(1) DEFAULT 0,
+    display_order   INT DEFAULT 0,
+    is_enabled      TINYINT(1) DEFAULT 1,
+    UNIQUE KEY uk_step_number (step_number)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS seasons_meta (
+    season        ENUM('spring','summer','autumn','winter') PRIMARY KEY,
+    jp_label      VARCHAR(8) DEFAULT '',
+    en_label      VARCHAR(32) DEFAULT '',
+    sub_zh        VARCHAR(200) DEFAULT '',
+    sub_ja        VARCHAR(200) DEFAULT '',
+    sub_en        VARCHAR(200) DEFAULT '',
+    caption_zh    TEXT,
+    caption_ja    TEXT,
+    caption_en    TEXT,
+    main_image_url VARCHAR(500) DEFAULT '',
+    display_order INT DEFAULT 0,
+    is_enabled    TINYINT(1) DEFAULT 1,
+    updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS villas (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    villa_key     VARCHAR(32) UNIQUE,
+    name_zh       VARCHAR(100) DEFAULT '',
+    name_ja       VARCHAR(100) DEFAULT '',
+    name_en       VARCHAR(100) DEFAULT '',
+    spec_zh       VARCHAR(200) DEFAULT '',
+    spec_ja       VARCHAR(200) DEFAULT '',
+    spec_en       VARCHAR(200) DEFAULT '',
+    tag_zh        VARCHAR(200) DEFAULT '',
+    tag_ja        VARCHAR(200) DEFAULT '',
+    tag_en        VARCHAR(200) DEFAULT '',
+    description_zh TEXT,
+    description_ja TEXT,
+    description_en TEXT,
+    main_image_url VARCHAR(500) DEFAULT '',
+    display_order INT DEFAULT 0,
+    is_enabled    TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS stay_plans (
+    id               INT AUTO_INCREMENT PRIMARY KEY,
+    plan_key         VARCHAR(64) UNIQUE,
+    tag_zh           VARCHAR(100) DEFAULT '',
+    tag_ja           VARCHAR(100) DEFAULT '',
+    tag_en           VARCHAR(100) DEFAULT '',
+    step_number_text VARCHAR(8) DEFAULT '',
+    title_zh         VARCHAR(200) DEFAULT '',
+    title_ja         VARCHAR(200) DEFAULT '',
+    title_en         VARCHAR(200) DEFAULT '',
+    description_zh   TEXT,
+    description_ja   TEXT,
+    description_en   TEXT,
+    price_text       VARCHAR(64) DEFAULT '',
+    main_image_url   VARCHAR(500) DEFAULT '',
+    cta_url          VARCHAR(500) DEFAULT '',
+    is_external      TINYINT(1) DEFAULT 0,
+    display_order    INT DEFAULT 0,
+    is_enabled       TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS location_section (
+    id              INT PRIMARY KEY DEFAULT 1,
+    eyebrow_zh      VARCHAR(200) DEFAULT '',
+    eyebrow_ja      VARCHAR(200) DEFAULT '',
+    eyebrow_en      VARCHAR(200) DEFAULT '',
+    title_zh        VARCHAR(200) DEFAULT '',
+    title_ja        VARCHAR(200) DEFAULT '',
+    title_en        VARCHAR(200) DEFAULT '',
+    description_zh  TEXT,
+    description_ja  TEXT,
+    description_en  TEXT,
+    address_zh      VARCHAR(500) DEFAULT '',
+    address_ja      VARCHAR(500) DEFAULT '',
+    address_en      VARCHAR(500) DEFAULT '',
+    map_image_url   VARCHAR(500) DEFAULT '',
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS location_access (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    display_order INT DEFAULT 0,
+    origin_zh     VARCHAR(100) DEFAULT '',
+    origin_ja     VARCHAR(100) DEFAULT '',
+    origin_en     VARCHAR(100) DEFAULT '',
+    duration_zh   VARCHAR(100) DEFAULT '',
+    duration_ja   VARCHAR(100) DEFAULT '',
+    duration_en   VARCHAR(100) DEFAULT '',
+    is_enabled    TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS cta_section (
+    id                INT PRIMARY KEY DEFAULT 1,
+    eyebrow_zh        VARCHAR(200) DEFAULT '',
+    eyebrow_ja        VARCHAR(200) DEFAULT '',
+    eyebrow_en        VARCHAR(200) DEFAULT '',
+    title_line1_zh    VARCHAR(200) DEFAULT '',
+    title_line1_ja    VARCHAR(200) DEFAULT '',
+    title_line1_en    VARCHAR(200) DEFAULT '',
+    title_line2_zh    VARCHAR(200) DEFAULT '',
+    title_line2_ja    VARCHAR(200) DEFAULT '',
+    title_line2_en    VARCHAR(200) DEFAULT '',
+    subtitle_zh       TEXT,
+    subtitle_ja       TEXT,
+    subtitle_en       TEXT,
+    primary_label_zh  VARCHAR(100) DEFAULT '',
+    primary_label_ja  VARCHAR(100) DEFAULT '',
+    primary_label_en  VARCHAR(100) DEFAULT '',
+    primary_url       VARCHAR(500) DEFAULT '',
+    secondary_label_zh VARCHAR(100) DEFAULT '',
+    secondary_label_ja VARCHAR(100) DEFAULT '',
+    secondary_label_en VARCHAR(100) DEFAULT '',
+    secondary_url     VARCHAR(500) DEFAULT '',
+    updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS home_sections (
+    section_key   VARCHAR(32) PRIMARY KEY,
+    display_order INT DEFAULT 0,
+    is_enabled    TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+];
+
+const V3_SEEDS = {
+  site_settings: [
+    { setting_key: 'reservation_url',  value_raw: 'https://example-booking-system.com/foresta-asama', value_zh: null, value_ja: null, value_en: null },
+    { setting_key: 'default_theme',    value_raw: 'onyx',  value_zh: null, value_ja: null, value_en: null },
+    { setting_key: 'brand_name',       value_raw: null, value_zh: 'Foresta Asama', value_ja: 'Foresta Asama', value_en: 'Foresta Asama' },
+    { setting_key: 'brand_tagline',    value_raw: null, value_zh: '轻井泽 · 浅间', value_ja: 'Karuizawa · Asama', value_en: 'Karuizawa · Asama' },
+  ],
+  hero_section: {
+    eyebrow_zh: '轻井泽 · 浅间山麓', eyebrow_ja: '軽井沢 · 浅間山麓', eyebrow_en: 'Karuizawa · Mt. Asama',
+    title_line1_zh: 'Terrace Villa', title_line1_ja: 'Terrace Villa', title_line1_en: 'Terrace Villa',
+    title_line2_zh: 'Foresta Asama', title_line2_ja: 'Foresta Asama', title_line2_en: 'Foresta Asama',
+    subtitle_zh: '树木与雾，柴火的香气。浅间的风穿过，轻井泽的私人别墅。',
+    subtitle_ja: '樹々と霧、薪の香り。浅間の風が抜ける、軽井沢のプライベートヴィラ。',
+    subtitle_en: 'Forests and mist, the scent of firewood. A private villa in Karuizawa where the Asama wind flows.',
+  },
+  hero_stats: [
+    { step: 1, value_text: 'IV',      label_zh: '栋别墅',  label_ja: '棟のヴィラ',  label_en: 'Villas',       display_order: 0 },
+    { step: 2, value_text: '1,000m',  label_zh: '海拔',    label_ja: '標高',        label_en: 'Elevation',    display_order: 1 },
+    { step: 3, value_text: '24h',     label_zh: '管家服务', label_ja: 'バトラー',    label_en: 'Butler',       display_order: 2 },
+    { step: 4, value_text: '71min',   label_zh: '距东京',  label_ja: '東京から',    label_en: 'From Tokyo',   display_order: 3 },
+  ],
+  flow_section: {
+    eyebrow_zh: '预约流程', eyebrow_ja: 'ご予約までの流れ', eyebrow_en: 'How to Reserve',
+    title_zh: '预约的三个步骤。', title_ja: 'ご予約までの、三つのステップ。', title_en: 'Three steps to your stay.',
+    subtitle_zh: '了解、选择、入住。礼宾将为您的住宿提供帮助。',
+    subtitle_ja: '知って、選んで、泊まる。コンシェルジュがあなたの滞在をお手伝いします。',
+    subtitle_en: 'Discover, choose, and stay. Our concierge will assist your entire experience.',
+  },
+  flow_steps: [
+    { step_number: 1, step_label_zh: '了解', step_label_ja: '知る', step_label_en: 'Discover',
+      title_zh: '了解', title_ja: '知る', title_en: 'Discover',
+      description_zh: '比较四栋别墅和季节的不同面貌。', description_ja: '四棟のヴィラと季節の表情を見比べる。', description_en: 'Compare the four villas and seasonal experiences.',
+      cta_label_zh: '查看别墅', cta_label_ja: 'ヴィラを見る', cta_label_en: 'View Villas', cta_url: '/plans', is_external: 0, display_order: 0 },
+    { step_number: 2, step_label_zh: '选择', step_label_ja: '選ぶ', step_label_en: 'Choose',
+      title_zh: '选择', title_ja: '選ぶ', title_en: 'Choose',
+      description_zh: '根据自己的生活方式选择住宿计划。', description_ja: '過ごし方に合わせて滞在プランを選ぶ。', description_en: 'Select the stay plan that suits your lifestyle.',
+      cta_label_zh: '套餐列表', cta_label_ja: 'プラン一覧', cta_label_en: 'View Plans', cta_url: '/plans', is_external: 0, display_order: 1 },
+    { step_number: 3, step_label_zh: '入住', step_label_ja: '泊まる', step_label_en: 'Stay',
+      title_zh: '入住', title_ja: '泊まる', title_en: 'Stay',
+      description_zh: '抵达后，管家将处理一切。', description_ja: '到着後はバトラーが全てを取り回す。', description_en: 'Upon arrival, your butler handles everything.',
+      cta_label_zh: '立即预约', cta_label_ja: '予約に進む', cta_label_en: 'Reserve Now', cta_url: '', is_external: 1, display_order: 2 },
+  ],
+  seasons_meta: [
+    { season: 'spring', jp_label: '春', en_label: 'Vernal',   display_order: 0,
+      sub_zh: '山樱与山菜的早晨', sub_ja: '山桜と山菜の朝', sub_en: 'Mountain Cherry & Wild Herbs',
+      caption_zh: '雪融溪流，嫩芽森林。在露台享用当地野菜和新茶。', caption_ja: '雪解けの渓流、芽吹きの森。地元の山菜と新茶を、テラスで。', caption_en: 'Snowmelt streams, budding forest. Local wild vegetables and new tea on the terrace.' },
+    { season: 'summer', jp_label: '夏', en_label: 'Estival',  display_order: 1,
+      sub_zh: '薄雾与高原的夜晚', sub_ja: '霧と高原の夜', sub_en: 'Mist & Highland Nights',
+      caption_zh: '轻井泽特有的清凉微风和薄雾。在暖炉旁享用沐浴星光的晚餐。', caption_ja: '軽井沢らしい涼風と霧。星を抱えた夕食、暖炉と。', caption_en: 'The cool breeze and mist unique to Karuizawa. Dinner under the stars by the fireplace.' },
+    { season: 'autumn', jp_label: '秋', en_label: 'Autumnal', display_order: 2,
+      sub_zh: '红叶与柴火', sub_ja: '紅葉と薪火', sub_en: 'Autumn Leaves & Fireside',
+      caption_zh: '枫树和榉树的朱红。围着篝火的漫长夜晚，地酒与主厨手艺。', caption_ja: '楓と欅の朱。薪火を囲む長い夜、地酒と料理長の手仕事。', caption_en: 'The crimson of maple and zelkova. Long evenings around the fire with local sake and chef\'s craft.' },
+    { season: 'winter', jp_label: '冬', en_label: 'Hibernal', display_order: 3,
+      sub_zh: '赏雪与温泉', sub_ja: '雪見と源泉', sub_en: 'Snow Views & Natural Springs',
+      caption_zh: '宁静的森林。露天浴池、雪景、蒸汽后面的浅间山。', caption_ja: '静まる森。露天と雪、湯気の向こうに浅間。', caption_en: 'Quiet forest. Open-air bath, snow, and Mt. Asama beyond the steam.' },
+  ],
+  villas: [
+    { villa_key: 'kaede',  display_order: 0,
+      name_zh: '枫 Kaede',   name_ja: '楓 Kaede',   name_en: 'Kaede (Maple)',
+      spec_zh: '2卧室 · 4人 · 160㎡', spec_ja: '2ベッドルーム · 4名 · 160㎡', spec_en: '2BR · 4 guests · 160㎡',
+      tag_zh: '最受欢迎', tag_ja: '最人気', tag_en: 'Most Popular',
+      description_zh: '被枫树环绕的别墅，秋季红叶尽收眼底。', description_ja: '楓に囲まれた邸。秋の紅葉が眼前に広がる。', description_en: 'Surrounded by maple trees with autumn foliage views.' },
+    { villa_key: 'kaba',   display_order: 1,
+      name_zh: '桦 Kaba',    name_ja: '樺 Kaba',    name_en: 'Kaba (Birch)',
+      spec_zh: '1卧室 · 2人 · 120㎡', spec_ja: '1ベッドルーム · 2名 · 120㎡', spec_en: '1BR · 2 guests · 120㎡',
+      tag_zh: '情侣首选', tag_ja: 'カップル向き', tag_en: 'For Couples',
+      description_zh: '白桦林中的宁静独栋，适合情侣私密滞在。', description_ja: '白樺林に佇む静謐な一棟。カップルに最適。', description_en: 'A serene villa in birch woods, ideal for couples.' },
+    { villa_key: 'keyaki', display_order: 2,
+      name_zh: '欅 Keyaki',  name_ja: '欅 Keyaki',  name_en: 'Keyaki (Zelkova)',
+      spec_zh: '3卧室 · 6人 · 200㎡', spec_ja: '3ベッドルーム · 6名 · 200㎡', spec_en: '3BR · 6 guests · 200㎡',
+      tag_zh: '家庭推荐', tag_ja: 'ファミリー向き', tag_en: 'Family Choice',
+      description_zh: '宽敞的三卧室，大家庭聚会的理想选择。', description_ja: '開放的な3室で、大人数のご家族に最適。', description_en: 'Spacious three bedrooms, perfect for family gatherings.' },
+    { villa_key: 'sakaki', display_order: 3,
+      name_zh: '榊 Sakaki',  name_ja: '榊 Sakaki',  name_en: 'Sakaki (Sacred Tree)',
+      spec_zh: '2卧室 · 4人 · 150㎡', spec_ja: '2ベッドルーム · 4名 · 150㎡', spec_en: '2BR · 4 guests · 150㎡',
+      tag_zh: '最高级', tag_ja: 'プレミアム', tag_en: 'Premium',
+      description_zh: '浅间山全景视野，最具奢华感的别墅。', description_ja: '浅間山を一望。最もラグジュアリーな邸。', description_en: 'Panoramic Asama views — the most luxurious villa.' },
+  ],
+  stay_plans: [
+    { plan_key: 'weekend', step_number_text: '01', display_order: 0,
+      tag_zh: '周末', tag_ja: '週末', tag_en: 'Weekend',
+      title_zh: '森林周末', title_ja: '森の週末', title_en: 'Forest Weekend',
+      description_zh: '两天一夜的放松假期。从东京出发，沉浸于自然中。', description_ja: '1泊2日のリトリート。東京を離れ、自然に溶け込む。', description_en: 'A 2-day retreat. Leave Tokyo and immerse yourself in nature.',
+      price_text: '¥180,000〜' },
+    { plan_key: 'anniversary', step_number_text: '02', display_order: 1,
+      tag_zh: '纪念日', tag_ja: 'アニバーサリー', tag_en: 'Anniversary',
+      title_zh: '特别纪念日', title_ja: '記念日プラン', title_en: 'Anniversary Plan',
+      description_zh: '为特别的两人定制的豪华体验。专属管家与花卉装饰。', description_ja: '大切な二人のための特別プラン。専属バトラーと花飾り。', description_en: 'A bespoke experience for two. Dedicated butler and floral arrangements.',
+      price_text: '¥380,000〜' },
+    { plan_key: 'longstay', step_number_text: '03', display_order: 2,
+      tag_zh: '长住', tag_ja: 'ロングステイ', tag_en: 'Long Stay',
+      title_zh: '远程工作套餐', title_ja: 'ワーケーション', title_en: 'Workcation',
+      description_zh: '三天以上，在宁静的森林别墅中工作与度假。', description_ja: '3泊以上。静寂の森で、仕事と休暇を両立する。', description_en: '3+ nights. Balance work and leisure in a tranquil forest villa.',
+      price_text: '¥520,000〜' },
+  ],
+  location: {
+    eyebrow_zh: '交通 · 地址', eyebrow_ja: 'アクセス · 所在地', eyebrow_en: 'Access · Location',
+    title_zh: '从东京轻松抵达。', title_ja: '東京から、やすやすと。', title_en: 'Easy to reach from Tokyo.',
+    description_zh: '乘坐北陆新干线约71分钟即可从东京抵达。我们提供从站台到别墅的接送服务。',
+    description_ja: '北陸新幹線で東京から約71分。駅から別荘までの送迎もご用意しております。',
+    description_en: 'About 71 minutes from Tokyo by Hokuriku Shinkansen. Transfer service from the station is available.',
+    address_zh: '长野县北佐久郡轻井泽町', address_ja: '長野県北佐久郡軽井沢町', address_en: 'Karuizawa-machi, Kitasaku-gun, Nagano',
+  },
+  location_access: [
+    { display_order: 0, origin_zh: '东京站', origin_ja: '東京駅', origin_en: 'Tokyo Station', duration_zh: '新干线71分钟', duration_ja: '新幹線で71分', duration_en: '71 min by Shinkansen' },
+    { display_order: 1, origin_zh: '轻井泽站', origin_ja: '軽井沢駅', origin_en: 'Karuizawa Station', duration_zh: '专车约15分钟', duration_ja: '送迎車で約15分', duration_en: '15 min by transfer car' },
+  ],
+  cta: {
+    eyebrow_zh: '最后的邀请', eyebrow_ja: 'Final Invitation', eyebrow_en: 'Final Invitation',
+    title_line1_zh: '四栋中，', title_line1_ja: '四棟のうち、', title_line1_en: 'Of the four villas,',
+    title_line2_zh: '今晚的那一栋。', title_line2_ja: '今夜の一棟を。', title_line2_en: 'tonight\'s one is yours.',
+    subtitle_zh: '剩余房间有限。我们接受3个月以内的预约。',
+    subtitle_ja: '残り室数はわずか。予約は3ヶ月先まで承ります。',
+    subtitle_en: 'Limited availability. Reservations accepted up to 3 months in advance.',
+    primary_label_zh: '立即预约', primary_label_ja: 'ご予約はこちら', primary_label_en: 'Reserve Now',
+    secondary_label_zh: '咨询礼宾', secondary_label_ja: 'コンシェルジュに相談', secondary_label_en: 'Contact Concierge',
+    secondary_url: '/contact',
+  },
+  home_sections: [
+    { section_key: 'hero',     display_order: 1 },
+    { section_key: 'flow',     display_order: 2 },
+    { section_key: 'villas',   display_order: 3 },
+    { section_key: 'seasons',  display_order: 4 },
+    { section_key: 'plans',    display_order: 5 },
+    { section_key: 'location', display_order: 6 },
+    { section_key: 'cta',      display_order: 7 },
+  ],
+};
+
+export async function ensureV3Tables(isTest = false): Promise<void> {
+  const db = getDb(isTest);
+  for (const ddl of V3_DDL) {
+    await db.query(ddl);
+  }
+  // Seed site_settings if empty
+  const [ssRows] = await db.query('SELECT COUNT(*) AS cnt FROM site_settings') as any[][];
+  if (ssRows[0].cnt === 0) {
+    for (const r of V3_SEEDS.site_settings) {
+      await db.query(
+        'INSERT IGNORE INTO site_settings (setting_key, value_raw, value_zh, value_ja, value_en) VALUES (?,?,?,?,?)',
+        [r.setting_key, r.value_raw ?? null, r.value_zh ?? null, r.value_ja ?? null, r.value_en ?? null],
+      );
+    }
+  }
+  // Seed hero_section if empty
+  const [hsRows] = await db.query('SELECT COUNT(*) AS cnt FROM hero_section') as any[][];
+  if (hsRows[0].cnt === 0) {
+    const h = V3_SEEDS.hero_section;
+    await db.query(
+      `INSERT INTO hero_section (id, eyebrow_zh, eyebrow_ja, eyebrow_en, title_line1_zh, title_line1_ja, title_line1_en,
+        title_line2_zh, title_line2_ja, title_line2_en, subtitle_zh, subtitle_ja, subtitle_en)
+       VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [h.eyebrow_zh, h.eyebrow_ja, h.eyebrow_en, h.title_line1_zh, h.title_line1_ja, h.title_line1_en,
+       h.title_line2_zh, h.title_line2_ja, h.title_line2_en, h.subtitle_zh, h.subtitle_ja, h.subtitle_en],
+    );
+  }
+  // Seed hero_stats
+  const [hstRows] = await db.query('SELECT COUNT(*) AS cnt FROM hero_stats') as any[][];
+  if (hstRows[0].cnt === 0) {
+    for (const s of V3_SEEDS.hero_stats) {
+      await db.query(
+        'INSERT INTO hero_stats (value_text, label_zh, label_ja, label_en, display_order) VALUES (?,?,?,?,?)',
+        [s.value_text, s.label_zh, s.label_ja, s.label_en, s.display_order],
+      );
+    }
+  }
+  // Seed flow_section
+  const [fsRows] = await db.query('SELECT COUNT(*) AS cnt FROM flow_section') as any[][];
+  if (fsRows[0].cnt === 0) {
+    const f = V3_SEEDS.flow_section;
+    await db.query(
+      'INSERT INTO flow_section (id, eyebrow_zh, eyebrow_ja, eyebrow_en, title_zh, title_ja, title_en, subtitle_zh, subtitle_ja, subtitle_en) VALUES (1,?,?,?,?,?,?,?,?,?)',
+      [f.eyebrow_zh, f.eyebrow_ja, f.eyebrow_en, f.title_zh, f.title_ja, f.title_en, f.subtitle_zh, f.subtitle_ja, f.subtitle_en],
+    );
+    for (const step of V3_SEEDS.flow_steps) {
+      await db.query(
+        `INSERT INTO flow_steps (step_number, step_label_zh, step_label_ja, step_label_en, title_zh, title_ja, title_en,
+          description_zh, description_ja, description_en, cta_label_zh, cta_label_ja, cta_label_en, cta_url, is_external, display_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [step.step_number, step.step_label_zh, step.step_label_ja, step.step_label_en,
+         step.title_zh, step.title_ja, step.title_en,
+         step.description_zh, step.description_ja, step.description_en,
+         step.cta_label_zh, step.cta_label_ja, step.cta_label_en,
+         step.cta_url, step.is_external, step.display_order],
+      );
+    }
+  }
+  // Seed seasons_meta
+  const [smRows] = await db.query('SELECT COUNT(*) AS cnt FROM seasons_meta') as any[][];
+  if (smRows[0].cnt === 0) {
+    for (const s of V3_SEEDS.seasons_meta) {
+      await db.query(
+        `INSERT INTO seasons_meta (season, jp_label, en_label, sub_zh, sub_ja, sub_en, caption_zh, caption_ja, caption_en, display_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [s.season, s.jp_label, s.en_label, s.sub_zh, s.sub_ja, s.sub_en, s.caption_zh, s.caption_ja, s.caption_en, s.display_order],
+      );
+    }
+  }
+  // Seed villas
+  const [vlRows] = await db.query('SELECT COUNT(*) AS cnt FROM villas') as any[][];
+  if (vlRows[0].cnt === 0) {
+    for (const v of V3_SEEDS.villas) {
+      await db.query(
+        `INSERT INTO villas (villa_key, name_zh, name_ja, name_en, spec_zh, spec_ja, spec_en, tag_zh, tag_ja, tag_en, description_zh, description_ja, description_en, display_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [v.villa_key, v.name_zh, v.name_ja, v.name_en, v.spec_zh, v.spec_ja, v.spec_en,
+         v.tag_zh, v.tag_ja, v.tag_en, v.description_zh, v.description_ja, v.description_en, v.display_order],
+      );
+    }
+  }
+  // Seed stay_plans
+  const [spRows] = await db.query('SELECT COUNT(*) AS cnt FROM stay_plans') as any[][];
+  if (spRows[0].cnt === 0) {
+    for (const p of V3_SEEDS.stay_plans) {
+      await db.query(
+        `INSERT INTO stay_plans (plan_key, tag_zh, tag_ja, tag_en, step_number_text, title_zh, title_ja, title_en,
+          description_zh, description_ja, description_en, price_text, display_order)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [p.plan_key, p.tag_zh, p.tag_ja, p.tag_en, p.step_number_text,
+         p.title_zh, p.title_ja, p.title_en,
+         p.description_zh, p.description_ja, p.description_en, p.price_text, p.display_order],
+      );
+    }
+  }
+  // Seed location_section
+  const [lsRows] = await db.query('SELECT COUNT(*) AS cnt FROM location_section') as any[][];
+  if (lsRows[0].cnt === 0) {
+    const l = V3_SEEDS.location;
+    await db.query(
+      `INSERT INTO location_section (id, eyebrow_zh, eyebrow_ja, eyebrow_en, title_zh, title_ja, title_en,
+        description_zh, description_ja, description_en, address_zh, address_ja, address_en)
+       VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [l.eyebrow_zh, l.eyebrow_ja, l.eyebrow_en, l.title_zh, l.title_ja, l.title_en,
+       l.description_zh, l.description_ja, l.description_en, l.address_zh, l.address_ja, l.address_en],
+    );
+    for (const a of V3_SEEDS.location_access) {
+      await db.query(
+        'INSERT INTO location_access (display_order, origin_zh, origin_ja, origin_en, duration_zh, duration_ja, duration_en) VALUES (?,?,?,?,?,?,?)',
+        [a.display_order, a.origin_zh, a.origin_ja, a.origin_en, a.duration_zh, a.duration_ja, a.duration_en],
+      );
+    }
+  }
+  // Seed cta_section
+  const [ctaRows] = await db.query('SELECT COUNT(*) AS cnt FROM cta_section') as any[][];
+  if (ctaRows[0].cnt === 0) {
+    const c = V3_SEEDS.cta;
+    await db.query(
+      `INSERT INTO cta_section (id, eyebrow_zh, eyebrow_ja, eyebrow_en,
+        title_line1_zh, title_line1_ja, title_line1_en,
+        title_line2_zh, title_line2_ja, title_line2_en,
+        subtitle_zh, subtitle_ja, subtitle_en,
+        primary_label_zh, primary_label_ja, primary_label_en,
+        secondary_label_zh, secondary_label_ja, secondary_label_en, secondary_url)
+       VALUES (1,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [c.eyebrow_zh, c.eyebrow_ja, c.eyebrow_en,
+       c.title_line1_zh, c.title_line1_ja, c.title_line1_en,
+       c.title_line2_zh, c.title_line2_ja, c.title_line2_en,
+       c.subtitle_zh, c.subtitle_ja, c.subtitle_en,
+       c.primary_label_zh, c.primary_label_ja, c.primary_label_en,
+       c.secondary_label_zh, c.secondary_label_ja, c.secondary_label_en, c.secondary_url],
+    );
+  }
+  // Seed home_sections
+  const [hscRows] = await db.query('SELECT COUNT(*) AS cnt FROM home_sections') as any[][];
+  if (hscRows[0].cnt === 0) {
+    for (const s of V3_SEEDS.home_sections) {
+      await db.query('INSERT INTO home_sections (section_key, display_order, is_enabled) VALUES (?,?,1)', [s.section_key, s.display_order]);
+    }
+  }
+}

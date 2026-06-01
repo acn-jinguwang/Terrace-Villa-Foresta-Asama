@@ -174,3 +174,48 @@
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
+
+/* ============ v3 Foresta Redesign Theme System ============ */
+
+:root,
+:root[data-theme="onyx"] {
+  --bg: #0d0d0b; --bg-2: #161510; --paper: #1c1b16;
+  --ink: #faf8f2; --ink-soft: #ddd6c5; --ink-mute: #8a8472;
+  --line: rgba(201,169,110,.25); --line-strong: rgba(201,169,110,.4);
+  --accent: #c9a96e; --accent-2: #dfc08a; --gold: #c9a96e;
+  --hero-grad-1: rgba(13,13,11,.85); --hero-grad-2: rgba(13,13,11,.45); --hero-grad-3: rgba(13,13,11,.85);
+}
+:root[data-theme="forest"] {
+  --bg: #f1ede2; --bg-2: #e6e0cf; --paper: #faf6ec;
+  --ink: #1d2218; --ink-soft: #3b4135; --ink-mute: #7d7b6a;
+  --line: rgba(47,74,53,.18); --line-strong: rgba(47,74,53,.3);
+  --accent: #2f4a35; --accent-2: #3d6044; --gold: #b3593b;
+  --hero-grad-1: rgba(241,237,226,.65); --hero-grad-2: rgba(241,237,226,.2); --hero-grad-3: rgba(241,237,226,.85);
+}
+:root[data-theme="mist"] {
+  --bg: #1a2028; --bg-2: #232a35; --paper: #2a323e;
+  --ink: #ecebe6; --ink-soft: #c8c5b6; --ink-mute: #7d8392;
+  --line: rgba(154,122,85,.25); --line-strong: rgba(154,122,85,.4);
+  --accent: #9a7a55; --accent-2: #b8946a; --gold: #b8946a;
+  --hero-grad-1: rgba(26,32,40,.85); --hero-grad-2: rgba(26,32,40,.45); --hero-grad-3: rgba(26,32,40,.85);
+}
+
+/* v3 typography & utility */
+.f-serif { font-family: 'Cormorant Garamond', 'Noto Serif JP', serif; }
+.f-display { font-family: 'Cinzel', serif; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; }
+.f-jp { font-family: 'Noto Serif JP', serif; }
+.mono-label { font-family: 'Cinzel', 'Inter', sans-serif; font-size: 10px; letter-spacing: .32em; text-transform: uppercase; font-weight: 500; color: var(--ink-mute); }
+.f-wrap { max-width: 1320px; margin: 0 auto; padding: 0 48px; }
+@media (max-width: 760px) { .f-wrap { padding: 0 24px; } }
+.f-ph { position: relative; background: linear-gradient(180deg, var(--bg-2), var(--paper)); overflow: hidden; }
+.f-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 14px 22px; font-family: 'Cinzel', 'Inter', sans-serif;
+  font-size: 11px; letter-spacing: .28em; text-transform: uppercase;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--bg);
+  text-decoration: none; font-weight: 500; transition: all .35s ease; cursor: pointer;
+}
+.f-btn:hover { background: var(--accent-2); border-color: var(--accent-2); }
+@keyframes f-rise { 0%{transform:translateY(18px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+@keyframes f-drift { from{transform:scale(1.02) translateY(0)} to{transform:scale(1.08) translateY(-1.5%)} }
+.f-rise { animation: f-rise .9s cubic-bezier(.2,.7,.2,1) both; }

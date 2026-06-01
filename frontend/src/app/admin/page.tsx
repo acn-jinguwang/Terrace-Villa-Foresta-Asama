@@ -3528,6 +3528,36 @@ export default function AdminPage() {
             </div>
           );
         })()}
+
+        {/* ─── v3 コンテンツ管理 ─── */}
+        <div style={{ marginTop:48, padding:24, background:'#111', borderRadius:8, border:'1px solid #222' }}>
+          <h3 style={{ color:'#c9a96e', fontSize:13, fontFamily:"'Cinzel',serif", letterSpacing:'.2em', marginBottom:16, textTransform:'uppercase', margin:'0 0 16px' }}>
+            Content Management
+          </h3>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+            {[
+              { href:'/admin/site-settings',  label:'サイト設定' },
+              { href:'/admin/home-sections',  label:'セクション制御' },
+              { href:'/admin/hero',           label:'トップ:Hero' },
+              { href:'/admin/flow',           label:'トップ:Flow' },
+              { href:'/admin/villas',         label:'トップ:Villas' },
+              { href:'/admin/seasons-meta',   label:'トップ:四季' },
+              { href:'/admin/stay-plans',     label:'トップ:Plans' },
+              { href:'/admin/location',       label:'トップ:Location' },
+              { href:'/admin/cta',            label:'トップ:CTA' },
+            ].map(item => (
+              <a
+                key={item.href}
+                href={(process.env.NEXT_PUBLIC_BASE_PATH || '') + item.href}
+                style={{ display:'block', padding:'12px 16px', background:'#1a1a1a', border:'1px solid #333', borderRadius:4, color:'#fff', textDecoration:'none', fontSize:13, transition:'border-color .2s' }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor='#c9a96e')}
+                onMouseLeave={e => (e.currentTarget.style.borderColor='#333')}
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
     </div>
   );
 }
