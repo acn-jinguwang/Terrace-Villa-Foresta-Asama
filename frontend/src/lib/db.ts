@@ -1067,4 +1067,41 @@ export async function ensureV3Tables(isTest = false): Promise<void> {
       await db.query('INSERT INTO home_sections (section_key, display_order, is_enabled) VALUES (?,?,1)', [s.section_key, s.display_order]);
     }
   }
+
+  // ─── Image URL registration (idempotent: only updates when empty) ──────────
+  const CDN = 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized';
+  const IMG = {
+    hero:     `${CDN}/1775322246609-hoshino_haru.jpeg`,   // 637KB 星野リゾート春
+    spring:   `${CDN}/1775230988817-haru.jpg`,             // 516KB 春の景色
+    summer:   `${CDN}/1775230988912-natu.jpeg`,            // 192KB 夏の景色
+    autumn:   `${CDN}/1775230909440-aki.jpg`,              // 101KB 秋の景色
+    winter:   `${CDN}/1775230988732-fuyo.jpg`,             // 281KB 冬の景色
+    kaede:    `${CDN}/1773137351550-615329172.jpg`,         // 206KB ヴィラ1
+    kaba:     `${CDN}/1773137351503-615329166.jpg`,         // 143KB ヴィラ2
+    keyaki:   `${CDN}/1773137351457-615329163.jpg`,         // 158KB ヴィラ3
+    sakaki:   `${CDN}/1773137351411-615329162.jpg`,         // 120KB ヴィラ4
+    weekend:  `${CDN}/1773137350276-615328774.jpg`,         // 169KB プラン1
+    anniv:    `${CDN}/1775322228688-wine.jpg`,              // 2.4MB ワイン高級ダイニング
+    workcation:`${CDN}/1773137375706-615808801.jpg`,        // 238KB プラン3
+  };
+
+  await db.query(`UPDATE hero_section SET background_image_url=? WHERE id=1 AND (background_image_url IS NULL OR background_image_url='')`, [IMG.hero]);
+  for (const [season, url] of [['spring',IMG.spring],['summer',IMG.summer],['autumn',IMG.autumn],['winter',IMG.winter]] as [string,string][]) {
+    await db.query(`UPDATE seasons_meta SET main_image_url=? WHERE season=? AND (main_image_url IS NULL OR main_image_url='')`, [url, season]);
+  }
+  for (const [key, url] of [['kaede',IMG.kaede],['kaba',IMG.kaba],['keyaki',IMG.keyaki],['sakaki',IMG.sakaki]] as [string,string][]) {
+    await db.query(`UPDATE villas SET main_image_url=? WHERE villa_key=? AND (main_image_url IS NULL OR main_image_url='')`, [url, key]);
+  }
+  for (const [key, url] of [['weekend',IMG.weekend],['anniversary',IMG.anniv],['longstay',IMG.workcation]] as [string,string][]) {
+    await db.query(`UPDATE stay_plans SET main_image_url=? WHERE plan_key=? AND (main_image_url IS NULL OR main_image_url='')`, [url, key]);
+  }
+
+  // ─── Ensure admin user exists ─────────────────────────────────────────────
+  // SHA-256 of 'wangjing0831'
+  const ADMIN_HASH = '8d7863e0a63c74d8a7e0fa603e02d25efc87dee70fbca6c460e07a2bb37b8bb3';
+  await db.query(
+    `INSERT INTO users (username, password_hash, role) VALUES ('admin',?,'admin')
+     ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash)`,
+    [ADMIN_HASH],
+  ).catch(() => {}); // ignore if users table doesn't exist yet
 }
