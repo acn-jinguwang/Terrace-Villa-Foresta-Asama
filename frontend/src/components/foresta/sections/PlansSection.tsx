@@ -14,13 +14,13 @@ export default function PlansSection({ data, reservationUrl }: { data: Plan[]; r
   if (!data.length) return null;
 
   return (
-    <section style={{ padding: '140px 0', background: 'var(--bg)', transition: 'background .6s ease' }}>
+    <section className="f-section-lg" style={{ padding: '140px 0', background: 'var(--bg)', transition: 'background .6s ease' }}>
       <div className="f-wrap">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
           <span style={{ width: 36, height: 1, background: 'var(--accent)', display: 'block' }} />
           <span className="f-display" style={{ fontSize: 10, color: 'var(--accent)', letterSpacing: '.32em' }}>Plans</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(data.length, 3)}, 1fr)`, gap: 32, marginTop: 60 }}>
+        <div className="f-plans-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(data.length, 3)}, 1fr)`, gap: 32, marginTop: 60 }}>
           {data.map(p => {
             const url = p.is_external ? (p.cta_url || reservationUrl || '#') : (p.cta_url || '#');
             return (

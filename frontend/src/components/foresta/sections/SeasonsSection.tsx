@@ -13,9 +13,9 @@ export default function SeasonsSection({ data }: { data: SeasonMeta[] }) {
   if (!current || !data.length) return null;
 
   return (
-    <section style={{ padding: '140px 0', background: 'var(--bg-2)', position: 'relative', overflow: 'hidden', transition: 'background .6s ease' }}>
+    <section className="f-section-lg" style={{ padding: '140px 0', background: 'var(--bg-2)', position: 'relative', overflow: 'hidden', transition: 'background .6s ease' }}>
       <div className="f-wrap">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <div className="f-seasons-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
               <span style={{ width: 36, height: 1, background: 'var(--accent)', display: 'block' }} />
@@ -46,7 +46,7 @@ export default function SeasonsSection({ data }: { data: SeasonMeta[] }) {
               ))}
             </div>
           </div>
-          <div style={{ position: 'relative' }}>
+          <div className="f-seasons-visual" style={{ position: 'relative' }}>
             {current.main_image_url ? (
               <img src={current.main_image_url} alt={current.en_label} style={{ width: '100%', aspectRatio: '4/5', objectFit: 'cover' }} />
             ) : (

@@ -14,6 +14,9 @@ export async function GET(request: Request) {
     const [stats] = await db.query(
       'SELECT * FROM hero_stats WHERE is_enabled = 1 ORDER BY display_order ASC',
     ) as any[][];
+    const [slides] = await db.query(
+      'SELECT * FROM hero_slides WHERE is_enabled = 1 ORDER BY display_order ASC',
+    ) as any[][];
 
     const h = hero ?? {};
     return NextResponse.json(
@@ -28,6 +31,13 @@ export async function GET(request: Request) {
           value_text:    s.value_text ?? '',
           label:         { zh: s.label_zh ?? '', ja: s.label_ja ?? '', en: s.label_en ?? '' },
           display_order: s.display_order ?? 0,
+        })),
+        slides: (slides as any[]).map((s) => ({
+          id:        s.id,
+          image_url: s.image_url ?? '',
+          alt_zh:    s.alt_zh ?? '',
+          alt_ja:    s.alt_ja ?? '',
+          alt_en:    s.alt_en ?? '',
         })),
       },
       { headers: NO_CACHE },

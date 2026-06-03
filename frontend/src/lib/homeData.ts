@@ -8,6 +8,7 @@ export async function fetchHomeData(isTest = false) {
     [settingsRows],
     [heroRows],
     [statsRows],
+    [heroSlidesRows],
     [flowRows],
     [flowStepsRows],
     [villasRows],
@@ -18,10 +19,13 @@ export async function fetchHomeData(isTest = false) {
     [ctaRows],
     [settingsForCta],
     [sectionsRows],
+    [videoSectionRows],
+    [featuredVideosRows],
   ] = await Promise.all([
     db.query('SELECT * FROM site_settings') as Promise<any[][]>,
     db.query('SELECT * FROM hero_section WHERE id = 1') as Promise<any[][]>,
     db.query('SELECT * FROM hero_stats WHERE is_enabled = 1 ORDER BY display_order ASC') as Promise<any[][]>,
+    db.query('SELECT * FROM hero_slides WHERE is_enabled = 1 ORDER BY display_order ASC') as Promise<any[][]>,
     db.query('SELECT * FROM flow_section WHERE id = 1') as Promise<any[][]>,
     db.query('SELECT * FROM flow_steps WHERE is_enabled = 1 ORDER BY display_order ASC') as Promise<any[][]>,
     db.query('SELECT * FROM villas WHERE is_enabled = 1 ORDER BY display_order ASC') as Promise<any[][]>,
@@ -32,6 +36,8 @@ export async function fetchHomeData(isTest = false) {
     db.query('SELECT * FROM cta_section WHERE id = 1') as Promise<any[][]>,
     db.query("SELECT value_raw FROM site_settings WHERE setting_key = 'reservation_url'") as Promise<any[][]>,
     db.query('SELECT * FROM home_sections ORDER BY display_order ASC') as Promise<any[][]>,
+    db.query('SELECT * FROM video_section WHERE id = 1') as Promise<any[][]>,
+    db.query('SELECT * FROM featured_videos WHERE is_enabled = 1 ORDER BY display_order ASC') as Promise<any[][]>,
   ]);
 
   // Settings
@@ -55,6 +61,10 @@ export async function fetchHomeData(isTest = false) {
       value_text: s.value_text ?? '',
       label: { zh: s.label_zh ?? '', ja: s.label_ja ?? '', en: s.label_en ?? '' },
       display_order: s.display_order ?? 0,
+    })),
+    slides: (heroSlidesRows as any[]).map(s => ({
+      id: s.id, image_url: s.image_url ?? '',
+      alt_zh: s.alt_zh ?? '', alt_ja: s.alt_ja ?? '', alt_en: s.alt_en ?? '',
     })),
   };
 
@@ -145,5 +155,19 @@ export async function fetchHomeData(isTest = false) {
     is_enabled:    r.is_enabled === 1,
   }));
 
-  return { settings, hero, flow, villas, seasonsMeta, plans, location, cta, sections };
+  const vs = (videoSectionRows as any[])[0] ?? {};
+  const videos = {
+    eyebrow:  { zh: vs.eyebrow_zh ?? '',  ja: vs.eyebrow_ja ?? '',  en: vs.eyebrow_en ?? '' },
+    title:    { zh: vs.title_zh ?? '',    ja: vs.title_ja ?? '',    en: vs.title_en ?? '' },
+    subtitle: { zh: vs.subtitle_zh ?? '', ja: vs.subtitle_ja ?? '', en: vs.subtitle_en ?? '' },
+    videos: (featuredVideosRows as any[]).map(r => ({
+      id: r.id,
+      title:         { zh: r.title_zh ?? '',       ja: r.title_ja ?? '',       en: r.title_en ?? '' },
+      video_url:     r.video_url ?? '',
+      thumbnail_url: r.thumbnail_url ?? '',
+      description:   { zh: r.description_zh ?? '', ja: r.description_ja ?? '', en: r.description_en ?? '' },
+    })),
+  };
+
+  return { settings, hero, flow, villas, seasonsMeta, plans, videos, location, cta, sections };
 }

@@ -3545,6 +3545,7 @@ export default function AdminPage() {
               { href:'/admin/stay-plans',     label:'トップ:Plans' },
               { href:'/admin/location',       label:'トップ:Location' },
               { href:'/admin/cta',            label:'トップ:CTA' },
+              { href:'/admin/videos',         label:'動画管理' },
             ].map(item => (
               <a
                 key={item.href}

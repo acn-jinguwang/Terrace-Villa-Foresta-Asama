@@ -14,7 +14,7 @@ export default function FlowSection({ data, reservationUrl }: { data: FlowData; 
   const t = (o: L) => o[language as keyof L] ?? o.ja ?? '';
 
   return (
-    <section style={{ padding: '160px 0 120px' }}>
+    <section className="f-section-xl" style={{ padding: '160px 0 120px' }}>
       <div className="f-wrap">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 80, marginBottom: 80 }}>
           <div>
@@ -29,7 +29,7 @@ export default function FlowSection({ data, reservationUrl }: { data: FlowData; 
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(data.steps.length, 3)}, 1fr)`, borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+        <div className="f-flow-grid" style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(data.steps.length, 3)}, 1fr)`, borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
           {data.steps.map((step, i) => {
             const url = step.is_external ? (step.cta_url || reservationUrl || '#') : (step.cta_url || '#');
             return (
@@ -38,6 +38,7 @@ export default function FlowSection({ data, reservationUrl }: { data: FlowData; 
                 href={url}
                 target={step.is_external ? '_blank' : undefined}
                 rel={step.is_external ? 'noopener noreferrer' : undefined}
+                className="f-flow-cell"
                 style={{
                   padding: '40px 40px 36px',
                   borderLeft: i > 0 ? '1px solid var(--line)' : 'none',

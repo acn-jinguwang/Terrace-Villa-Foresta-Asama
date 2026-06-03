@@ -13,7 +13,7 @@ export default function ClosingCTA({ data }: { data: CTAData }) {
   const t = (o: L) => o[language as keyof L] ?? o.ja ?? '';
 
   return (
-    <section style={{ padding: '140px 0', background: 'var(--bg)', position: 'relative', overflow: 'hidden', borderTop: '1px solid var(--line)' }}>
+    <section className="f-section-lg" style={{ padding: '140px 0', background: 'var(--bg)', position: 'relative', overflow: 'hidden', borderTop: '1px solid var(--line)' }}>
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 300, pointerEvents: 'none' }}>
         <svg viewBox="0 0 1600 280" preserveAspectRatio="none" style={{ height: 300, opacity: .08, width: '100%' }} aria-hidden="true">
           <path fill="var(--accent)" d="M0,280 L0,210 C 120,200 220,190 320,170 C 420,148 500,118 560,98 L 640,52 L 720,12 L 800,0 L 880,18 L 960,62 L 1040,108 C 1110,138 1200,162 1300,182 C 1400,200 1500,212 1600,218 L 1600,280 Z" />
@@ -26,7 +26,7 @@ export default function ClosingCTA({ data }: { data: CTAData }) {
           <span style={{ color: 'var(--gold)' }}>{t(data.title_line2)}</span>
         </h2>
         <p className="f-jp" style={{ margin: '32px auto 0', fontSize: 15, color: 'var(--ink-soft)', lineHeight: 1.9, maxWidth: 520 }}>{t(data.subtitle)}</p>
-        <div style={{ marginTop: 56, display: 'flex', gap: 18, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="f-cta-row" style={{ marginTop: 56, display: 'flex', gap: 18, justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
           {data.primary_url && (
             <a href={data.primary_url} target="_blank" rel="noopener noreferrer" className="f-btn">
               {t(data.primary_label)} <span>↗</span>

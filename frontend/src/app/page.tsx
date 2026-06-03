@@ -5,6 +5,7 @@ import SeasonsSection from '@/components/foresta/sections/SeasonsSection';
 import PlansSection from '@/components/foresta/sections/PlansSection';
 import LocationSection from '@/components/foresta/sections/LocationSection';
 import ClosingCTA from '@/components/foresta/sections/ClosingCTA';
+import VideoSection from '@/components/foresta/sections/VideoSection';
 import ThemeSwitcher from '@/components/foresta/ThemeSwitcher';
 import { fetchHomeData } from '@/lib/homeData';
 
@@ -47,6 +48,8 @@ export default async function Page() {
             return data!.seasonsMeta.length ? <SeasonsSection key="seasons" data={data!.seasonsMeta} /> : null;
           case 'plans':
             return data!.plans.length ? <PlansSection key="plans" data={data!.plans} reservationUrl={reservationUrl} /> : null;
+          case 'videos':
+            return (data!.videos as any)?.videos?.length ? <VideoSection key="videos" data={data!.videos as any} /> : null;
           case 'location':
             return <LocationSection key="location" data={data!.location} />;
           case 'cta':

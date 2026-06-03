@@ -14,9 +14,9 @@ export default function LocationSection({ data }: { data: LocationData }) {
   const t = (o: L) => o[language as keyof L] ?? o.ja ?? '';
 
   return (
-    <section style={{ padding: '140px 0', background: 'var(--bg)' }}>
+    <section className="f-section-lg" style={{ padding: '140px 0', background: 'var(--bg)' }}>
       <div className="f-wrap">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
+        <div className="f-location-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
               <span style={{ width: 36, height: 1, background: 'var(--accent)', display: 'block' }} />
@@ -34,7 +34,7 @@ export default function LocationSection({ data }: { data: LocationData }) {
             </div>
             <p style={{ fontSize: 13, color: 'var(--ink-mute)', lineHeight: 1.8 }}>{t(data.address)}</p>
           </div>
-          <div>
+          <div className="f-location-map">
             {data.map_image_url ? (
               <img src={data.map_image_url} alt="Map" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', border: '1px solid var(--line)' }} />
             ) : (

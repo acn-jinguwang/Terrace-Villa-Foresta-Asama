@@ -13,13 +13,13 @@ export default function VillasSection({ data }: { data: Villa[] }) {
   if (!villa || !data.length) return null;
 
   return (
-    <section style={{ padding: '140px 0', background: 'var(--bg-2)', transition: 'background .6s ease' }}>
+    <section className="f-section-lg" style={{ padding: '140px 0', background: 'var(--bg-2)', transition: 'background .6s ease' }}>
       <div className="f-wrap">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
           <span style={{ width: 36, height: 1, background: 'var(--accent)', display: 'block' }} />
           <span className="f-display" style={{ fontSize: 10, color: 'var(--accent)', letterSpacing: '.32em' }}>Villas</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 80, alignItems: 'start' }}>
+        <div className="f-villas-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 80, alignItems: 'start' }}>
           <div>
             <h2 className="f-jp" style={{ fontSize: 'clamp(28px,3.5vw,48px)', lineHeight: 1.2, color: 'var(--ink)', fontWeight: 500, marginBottom: 40 }}>
               四棟のヴィラ。
@@ -51,7 +51,7 @@ export default function VillasSection({ data }: { data: Villa[] }) {
             ) : (
               <div className="f-ph" style={{ aspectRatio: '4/5' }} />
             )}
-            <div style={{
+            <div className="f-villa-detail" style={{
               position: 'absolute', left: -32, bottom: -24,
               background: 'var(--paper)', padding: '28px 32px',
               maxWidth: 360, border: '1px solid var(--line-strong)',

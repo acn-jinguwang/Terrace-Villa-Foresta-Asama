@@ -796,6 +796,44 @@ const V3_DDL = [
     display_order INT DEFAULT 0,
     is_enabled    TINYINT(1) DEFAULT 1
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS hero_slides (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    image_url     VARCHAR(500) NOT NULL DEFAULT '',
+    alt_zh        VARCHAR(200) DEFAULT '',
+    alt_ja        VARCHAR(200) DEFAULT '',
+    alt_en        VARCHAR(200) DEFAULT '',
+    display_order INT DEFAULT 0,
+    is_enabled    TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS video_section (
+    id          INT PRIMARY KEY DEFAULT 1,
+    eyebrow_zh  VARCHAR(200) DEFAULT '',
+    eyebrow_ja  VARCHAR(200) DEFAULT '',
+    eyebrow_en  VARCHAR(200) DEFAULT '',
+    title_zh    VARCHAR(200) DEFAULT '',
+    title_ja    VARCHAR(200) DEFAULT '',
+    title_en    VARCHAR(200) DEFAULT '',
+    subtitle_zh TEXT,
+    subtitle_ja TEXT,
+    subtitle_en TEXT,
+    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+  `CREATE TABLE IF NOT EXISTS featured_videos (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    title_zh        VARCHAR(200) DEFAULT '',
+    title_ja        VARCHAR(200) DEFAULT '',
+    title_en        VARCHAR(200) DEFAULT '',
+    video_url       VARCHAR(500) NOT NULL DEFAULT '',
+    thumbnail_url   VARCHAR(500) DEFAULT '',
+    description_zh  TEXT,
+    description_ja  TEXT,
+    description_en  TEXT,
+    display_order   INT DEFAULT 0,
+    is_enabled      TINYINT(1) DEFAULT 1
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
 const V3_SEEDS = {
@@ -922,8 +960,31 @@ const V3_SEEDS = {
     { section_key: 'villas',   display_order: 3 },
     { section_key: 'seasons',  display_order: 4 },
     { section_key: 'plans',    display_order: 5 },
-    { section_key: 'location', display_order: 6 },
-    { section_key: 'cta',      display_order: 7 },
+    { section_key: 'videos',   display_order: 6 },
+    { section_key: 'location', display_order: 7 },
+    { section_key: 'cta',      display_order: 8 },
+  ],
+  hero_slides: [
+    { image_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized/1775322246609-hoshino_haru.jpeg', alt_ja: '星野リゾート春', display_order: 0 },
+    { image_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized/1775322255657-hoshino_natu.jpg',  alt_ja: '星野リゾート夏', display_order: 1 },
+    { image_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized/1775322227661-hosino_aki.jpeg',   alt_ja: '星野リゾート秋', display_order: 2 },
+    { image_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized/1775322238229-hosino_fuyu.jpeg',  alt_ja: '星野リゾート冬', display_order: 3 },
+  ],
+  video_section: {
+    eyebrow_zh: '影片展示', eyebrow_ja: '動画ギャラリー', eyebrow_en: 'Video Gallery',
+    title_zh: 'Foresta Asama的世界。', title_ja: 'Foresta Asamaの世界。', title_en: 'The World of Foresta Asama.',
+    subtitle_zh: '通过影片，感受轻井泽的四季与别墅生活。', subtitle_ja: '映像を通じて、軽井沢の四季とヴィラライフをご覧ください。', subtitle_en: 'Experience the seasons and villa life of Karuizawa through film.',
+  },
+  featured_videos: [
+    {
+      title_zh: 'Foresta Asama 紹介映像',
+      title_ja: 'Foresta Asama 紹介映像',
+      title_en: 'Foresta Asama Introduction',
+      video_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/videos/1774275846996-generated-video__1_.mp4',
+      thumbnail_url: 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized/1775322246609-hoshino_haru.jpeg',
+      description_zh: '轻井泽浅间山麓的私人别墅。', description_ja: '軽井沢・浅間山麓のプライベートヴィラ。', description_en: 'Private villas at the foot of Mt. Asama, Karuizawa.',
+      display_order: 0,
+    },
   ],
 };
 
@@ -1067,6 +1128,42 @@ export async function ensureV3Tables(isTest = false): Promise<void> {
       await db.query('INSERT INTO home_sections (section_key, display_order, is_enabled) VALUES (?,?,1)', [s.section_key, s.display_order]);
     }
   }
+
+  // Seed hero_slides
+  const [hslidRows] = await db.query('SELECT COUNT(*) AS cnt FROM hero_slides') as any[][];
+  if (hslidRows[0].cnt === 0) {
+    for (const s of V3_SEEDS.hero_slides) {
+      await db.query(
+        'INSERT INTO hero_slides (image_url, alt_zh, alt_ja, alt_en, display_order) VALUES (?,?,?,?,?)',
+        [s.image_url, '', s.alt_ja, s.alt_ja, s.display_order],
+      );
+    }
+  }
+  // Seed video_section
+  const [vsRows] = await db.query('SELECT COUNT(*) AS cnt FROM video_section') as any[][];
+  if (vsRows[0].cnt === 0) {
+    const v = V3_SEEDS.video_section;
+    await db.query(
+      `INSERT INTO video_section (id, eyebrow_zh, eyebrow_ja, eyebrow_en, title_zh, title_ja, title_en, subtitle_zh, subtitle_ja, subtitle_en)
+       VALUES (1,?,?,?,?,?,?,?,?,?)`,
+      [v.eyebrow_zh, v.eyebrow_ja, v.eyebrow_en, v.title_zh, v.title_ja, v.title_en, v.subtitle_zh, v.subtitle_ja, v.subtitle_en],
+    );
+  }
+  // Seed featured_videos
+  const [fvRows] = await db.query('SELECT COUNT(*) AS cnt FROM featured_videos') as any[][];
+  if (fvRows[0].cnt === 0) {
+    for (const v of V3_SEEDS.featured_videos) {
+      await db.query(
+        `INSERT INTO featured_videos (title_zh, title_ja, title_en, video_url, thumbnail_url, description_zh, description_ja, description_en, display_order)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [v.title_zh, v.title_ja, v.title_en, v.video_url, v.thumbnail_url, v.description_zh, v.description_ja, v.description_en, v.display_order],
+      );
+    }
+  }
+  // Ensure videos entry in home_sections
+  await db.query(
+    `INSERT IGNORE INTO home_sections (section_key, display_order, is_enabled) VALUES ('videos', 6, 1)`,
+  );
 
   // ─── Image URL registration (idempotent: only updates when empty) ──────────
   const CDN = 'https://d143jkdkye8i79.cloudfront.net/uploads/uncategorized';
