@@ -178,6 +178,98 @@
   }
 }
 
+/* ============ テーマ別オーバーライド ============ */
+/* Forest/Mist テーマ時に Tailwind hardcoded クラスをCSS変数で上書き */
+
+:root[data-theme="forest"] .bg-dark,
+:root[data-theme="mist"] .bg-dark {
+  background-color: var(--bg) !important;
+}
+
+:root[data-theme="forest"] .bg-dark-secondary,
+:root[data-theme="mist"] .bg-dark-secondary {
+  background-color: var(--bg-2) !important;
+}
+
+:root[data-theme="forest"] .bg-dark-tertiary,
+:root[data-theme="mist"] .bg-dark-tertiary {
+  background-color: var(--paper) !important;
+}
+
+:root[data-theme="forest"] .text-white,
+:root[data-theme="mist"] .text-white {
+  color: var(--ink) !important;
+}
+
+:root[data-theme="forest"] .text-white\/70,
+:root[data-theme="mist"] .text-white\/70 {
+  color: rgba(var(--ink-rgb, 29,34,24), 0.7) !important;
+}
+
+:root[data-theme="forest"] .text-white\/60,
+:root[data-theme="mist"] .text-white\/60 {
+  color: var(--ink-soft) !important;
+}
+
+:root[data-theme="forest"] .text-white\/50,
+:root[data-theme="mist"] .text-white\/50 {
+  color: var(--ink-soft) !important;
+}
+
+:root[data-theme="forest"] .text-white\/40,
+:root[data-theme="mist"] .text-white\/40 {
+  color: var(--ink-mute) !important;
+}
+
+:root[data-theme="forest"] .text-white\/30,
+:root[data-theme="mist"] .text-white\/30 {
+  color: var(--ink-mute) !important;
+}
+
+:root[data-theme="forest"] .text-white\/20,
+:root[data-theme="mist"] .text-white\/20 {
+  color: var(--ink-mute) !important;
+}
+
+:root[data-theme="forest"] .border-white\/5,
+:root[data-theme="mist"] .border-white\/5 {
+  border-color: var(--line) !important;
+}
+
+:root[data-theme="forest"] .border-white\/10,
+:root[data-theme="mist"] .border-white\/10 {
+  border-color: var(--line) !important;
+}
+
+:root[data-theme="forest"] .border-white\/20,
+:root[data-theme="mist"] .border-white\/20 {
+  border-color: var(--line-strong) !important;
+}
+
+/* luxury-card のhover対応 */
+:root[data-theme="forest"] .luxury-card,
+:root[data-theme="mist"] .luxury-card {
+  background-color: var(--paper) !important;
+  border-color: var(--line) !important;
+}
+
+/* section-title カラー */
+:root[data-theme="forest"] .section-title,
+:root[data-theme="mist"] .section-title {
+  color: var(--accent) !important;
+}
+
+/* ============ アニメーション修正 ============ */
+/* FadeUp: z-index確保、overflow-hiddenに対応 */
+.foresta-fade-up {
+  will-change: opacity, transform;
+}
+
+/* ThemeSwitcher z-index強化 */
+.theme-switcher {
+  z-index: 9999 !important;
+}
+
 @layer components {
   .font-serif {
     font-family: 'Playfair Display', serif;

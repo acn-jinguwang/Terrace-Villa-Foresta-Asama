@@ -139,6 +139,11 @@ export default function AdminPage() {
   const adminBase = pathname.startsWith('/test') ? '/test/admin' : '/admin';
   const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
 
+  // Admin は常に Onyx テーマで表示
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'onyx');
+  }, []);
+
   // ── Media state ──
   const [activeTab, setActiveTab]       = useState<Tab>('images');
   const [files, setFiles]               = useState<MediaFile[]>([]);

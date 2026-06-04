@@ -10,11 +10,18 @@ const OPTIONS = [
 
 export function ThemeSwitcher() {
   const { theme, changeTheme } = useTheme();
-  const pathname = usePathname();
-  if (pathname?.startsWith('/admin') || pathname?.includes('/admin')) return null;
+  const pathname = usePathname() ?? '';
+
+  // Admin ページでは非表示
+  if (pathname.includes('/admin')) return null;
 
   return (
-    <div className="theme-switcher" role="region" aria-label="テーマ選択">
+    <div
+      className="theme-switcher"
+      role="region"
+      aria-label="テーマ選択"
+      style={{ zIndex: 9999 }}
+    >
       <span className="ts-label">Theme</span>
       {OPTIONS.map(o => (
         <button
@@ -22,6 +29,7 @@ export function ThemeSwitcher() {
           onClick={() => changeTheme(o.key)}
           className={theme === o.key ? 'active' : ''}
           aria-pressed={theme === o.key}
+          style={{ minWidth: 52 }}
         >
           <span className="swatch" style={{ background: o.sw }} />
           {o.label}

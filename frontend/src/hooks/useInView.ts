@@ -8,19 +8,27 @@ interface Options {
 }
 
 export function useInView<T extends HTMLElement = HTMLDivElement>(opts: Options = {}) {
-  const { threshold = 0.15, rootMargin = '0px 0px -10% 0px', once = true } = opts;
+  const { threshold = 0.1, rootMargin = '0px 0px -5% 0px', once = true } = opts;
   const ref = useRef<T | null>(null);
   const [inView, setInView] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (typeof window === 'undefined') return;
 
+    // reduced-motion や IntersectionObserver 非対応は即座にvisible
     if (
+      typeof window === 'undefined' ||
       !('IntersectionObserver' in window) ||
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     ) {
+      setInView(true);
+      return;
+    }
+
+    // 既に viewport 内なら即座にvisible
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight && rect.bottom > 0) {
       setInView(true);
       return;
     }
