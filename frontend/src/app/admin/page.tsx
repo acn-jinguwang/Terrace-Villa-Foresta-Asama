@@ -830,6 +830,16 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* ── Tabs ── */}
+        {/* サイト設定リンク */}
+        <div className="flex items-center justify-end mb-4">
+          <a
+            href={(process.env.NEXT_PUBLIC_BASE_PATH || '') + '/admin/site-settings'}
+            className="px-4 py-2 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold font-display text-[10px] uppercase tracking-[0.3em] transition-all duration-300"
+          >
+            ⚙ サイト設定
+          </a>
+        </div>
+
         <div className="flex overflow-x-auto border-b border-white/10 mb-8">
           {(['images', 'videos', 'plans', 'layout', 'contact', 'surroundings'] as Tab[]).map((tab) => (
             <button key={tab}

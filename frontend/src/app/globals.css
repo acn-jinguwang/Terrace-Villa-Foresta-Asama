@@ -4,6 +4,144 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============ 3テーマ定義 ============ */
+:root,
+:root[data-theme="onyx"] {
+  --bg: #0d0d0b;
+  --bg-2: #161510;
+  --paper: #1c1b16;
+  --ink: #faf8f2;
+  --ink-soft: #ddd6c5;
+  --ink-mute: #8a8472;
+  --line: rgba(201, 169, 110, 0.25);
+  --line-strong: rgba(201, 169, 110, 0.4);
+  --accent: #c9a96e;
+  --accent-2: #dfc08a;
+  --gold: #c9a96e;
+}
+
+:root[data-theme="forest"] {
+  --bg: #f1ede2;
+  --bg-2: #e6e0cf;
+  --paper: #faf6ec;
+  --ink: #1d2218;
+  --ink-soft: #3b4135;
+  --ink-mute: #7d7b6a;
+  --line: rgba(47, 74, 53, 0.18);
+  --line-strong: rgba(47, 74, 53, 0.3);
+  --accent: #2f4a35;
+  --accent-2: #3d6044;
+  --gold: #b3593b;
+}
+
+:root[data-theme="mist"] {
+  --bg: #1a2028;
+  --bg-2: #232a35;
+  --paper: #2a323e;
+  --ink: #ecebe6;
+  --ink-soft: #c8c5b6;
+  --ink-mute: #7d8392;
+  --line: rgba(154, 122, 85, 0.25);
+  --line-strong: rgba(154, 122, 85, 0.4);
+  --accent: #9a7a55;
+  --accent-2: #b8946a;
+  --gold: #b8946a;
+}
+
+/* ============ テーマスイッチャー ============ */
+.theme-switcher {
+  position: fixed; right: 24px; bottom: 24px; z-index: 100;
+  background: color-mix(in srgb, var(--paper, #1c1b16) 95%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line-strong, rgba(201,169,110,.4));
+  padding: 8px 10px;
+  display: flex; gap: 4px; align-items: center;
+  box-shadow: 0 12px 40px -10px rgba(0,0,0,0.4);
+  transition: background .6s ease, border-color .6s ease;
+}
+.theme-switcher .ts-label {
+  font-family: 'Cinzel', sans-serif;
+  font-size: 9px; color: var(--ink-mute, #8a8472);
+  letter-spacing: .3em; padding: 0 8px 0 4px;
+  text-transform: uppercase;
+}
+.theme-switcher button {
+  border: 1px solid var(--line, rgba(201,169,110,.25));
+  background: var(--bg-2, #161510); color: var(--ink-soft, #ddd6c5);
+  font-family: 'Cinzel', sans-serif;
+  font-size: 9.5px; letter-spacing: .2em;
+  padding: 7px 10px; text-transform: uppercase; font-weight: 500;
+  transition: all .25s;
+  display: flex; align-items: center; gap: 5px;
+  cursor: pointer;
+}
+.theme-switcher button:hover { border-color: var(--accent, #c9a96e); color: var(--ink, #faf8f2); }
+.theme-switcher button.active {
+  background: var(--accent, #c9a96e); color: var(--bg, #0d0d0b);
+  border-color: var(--accent, #c9a96e); font-weight: 600;
+}
+.theme-switcher button .swatch {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; flex-shrink: 0;
+}
+@media (max-width: 760px) {
+  .theme-switcher { right: 12px; bottom: 12px; padding: 6px 8px; }
+  .theme-switcher .ts-label { display: none; }
+}
+
+/* ============ 画像アニメーション ============ */
+
+/* 1. Drift — Hero背景の緩やかなパン/ズーム */
+@keyframes forestaDrift {
+  0%   { transform: scale(1.04) translate3d(0, 0, 0); }
+  50%  { transform: scale(1.07) translate3d(-1%, -1.2%, 0); }
+  100% { transform: scale(1.04) translate3d(0, 0, 0); }
+}
+.foresta-img-drift {
+  animation: forestaDrift 22s ease-in-out infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* 2. Fade Up — スクロール時の登場 */
+.foresta-fade-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity .9s cubic-bezier(.2,.7,.2,1), transform .9s cubic-bezier(.2,.7,.2,1);
+}
+.foresta-fade-up.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 3. Hover Scale — カード画像 */
+.foresta-img-hover { overflow: hidden; position: relative; }
+.foresta-img-hover img,
+.foresta-img-hover > * {
+  transition: transform .7s cubic-bezier(.2,.7,.2,1);
+}
+.foresta-img-hover:hover img,
+.foresta-img-hover:hover > * {
+  transform: scale(1.04);
+}
+
+/* 4. Sequential delays */
+.foresta-delay-1 { transition-delay: .08s; }
+.foresta-delay-2 { transition-delay: .16s; }
+.foresta-delay-3 { transition-delay: .24s; }
+.foresta-delay-4 { transition-delay: .32s; }
+.foresta-delay-5 { transition-delay: .40s; }
+.foresta-delay-6 { transition-delay: .48s; }
+
+/* 5. prefers-reduced-motion 対応 */
+@media (prefers-reduced-motion: reduce) {
+  .foresta-img-drift { animation: none !important; transform: none !important; }
+  .foresta-fade-up { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .foresta-img-hover:hover img,
+  .foresta-img-hover:hover > * { transform: none !important; }
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -14,10 +152,11 @@
   }
 
   body {
-    background-color: #050505;
-    color: #ffffff;
+    background-color: var(--bg, #050505);
+    color: var(--ink, #ffffff);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    transition: background-color .6s ease, color .6s ease;
     -moz-osx-font-smoothing: grayscale;
   }
 

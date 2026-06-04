@@ -35,6 +35,18 @@ export function getDb(isTest = false): mysql.Pool {
   return prodPool;
 }
 
+export async function ensureSiteSettings(isTest = false): Promise<void> {
+  const db = getDb(isTest);
+  await db.query(`CREATE TABLE IF NOT EXISTS site_settings (
+    setting_key VARCHAR(64) PRIMARY KEY,
+    value_raw   TEXT,
+    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+  await db.query(
+    `INSERT IGNORE INTO site_settings (setting_key, value_raw) VALUES ('default_theme', 'onyx')`,
+  );
+}
+
 export async function runMigration(): Promise<void> {
   const db = getDb();
   const tables = [
