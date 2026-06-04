@@ -3,6 +3,10 @@ FROM public.ecr.aws/docker/library/node:20-alpine AS builder
 
 WORKDIR /app
 
+# NEXT_PUBLIC_BASE_PATH: /test for test env (sets assetPrefix so /_next/static → /test/_next/static)
+ARG NEXT_PUBLIC_BASE_PATH=""
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
+
 # Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci

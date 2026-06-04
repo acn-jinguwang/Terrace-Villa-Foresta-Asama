@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  // For test env: static assets served from /test/_next/static/ so ALB routes them correctly
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
   images: {
     remotePatterns: [
       {
