@@ -8,7 +8,7 @@ import { translations } from '@/i18n/translations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'images' | 'videos' | 'plans' | 'layout' | 'contact' | 'surroundings' | 'announcements';
+type Tab = 'images' | 'videos' | 'plans' | 'layout' | 'contact' | 'surroundings' | 'seasons' | 'announcements';
 
 interface AnnouncementItem {
   id: number;
@@ -32,6 +32,28 @@ interface SurroundingSpot {
   tagsZh: string[]; tagsJa: string[]; tagsEn: string[];
   visible: boolean;
   sortOrder: number;
+}
+
+interface SeasonImage {
+  id: number;
+  imageUrl: string;
+  s3Key: string;
+  altZh: string; altJa: string; altEn: string;
+  isMain: boolean;
+  displayOrder: number;
+}
+
+interface SeasonSpotAdmin {
+  id: number | null;
+  season: 'spring' | 'summer' | 'autumn' | 'winter';
+  nameZh: string; nameJa: string; nameEn: string;
+  descZh: string; descJa: string; descEn: string;
+  accessZh: string; accessJa: string; accessEn: string;
+  distanceMin: number;
+  isFeatured: boolean;
+  displayOrder: number;
+  isActive: boolean;
+  images: SeasonImage[];
 }
 
 interface MediaFile {
@@ -238,6 +260,27 @@ export default function AdminPage() {
   const [surroundingImagePickerOpen, setSurroundingImagePickerOpen] = useState(false);
   const [surroundingSaving, setSurroundingSaving] = useState(false);
 
+  // ── Seasons state ──
+  const [seasonSpots, setSeasonSpots]       = useState<SeasonSpotAdmin[]>([]);
+  const [seasonLoading, setSeasonLoading]   = useState(false);
+  const [seasonTab, setSeasonTab]           = useState<'spring'|'summer'|'autumn'|'winter'>('spring');
+  const [seasonEditId, setSeasonEditId]     = useState<number | 'new' | null>(null);
+  const [seasonUploading, setSeasonUploading] = useState(false);
+  const [seasonSaving, setSeasonSaving]     = useState(false);
+  const blankSeason = (): SeasonSpotAdmin => ({
+    id: null, season: seasonTab,
+    nameZh: '', nameJa: '', nameEn: '',
+    descZh: '', descJa: '', descEn: '',
+    accessZh: '', accessJa: '', accessEn: '',
+    distanceMin: 15, isFeatured: false, displayOrder: 0, isActive: true, images: [],
+  });
+  const [seasonForm, setSeasonForm]         = useState<SeasonSpotAdmin>(blankSeason());
+  const [seasonCovers, setSeasonCovers]     = useState<Record<string, string | null>>({ spring: null, summer: null, autumn: null, winter: null });
+  const [coverUploading, setCoverUploading] = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen]         = useState(false);
+  const [pickerCallback, setPickerCallback] = useState<((url: string) => Promise<void>) | null>(null);
+  const [pickerImages, setPickerImages]     = useState<MediaFile[] | null>(null);
+
   // ── Contact state ──
   const [contactForm, setContactForm] = useState({
     phone: '', phoneVisible: true,
@@ -341,6 +384,21 @@ export default function AdminPage() {
       .catch(() => {})
       .finally(() => setContactLoading(false));
   }, [activeTab]);
+
+  // ── Load seasons when tab or season filter changes ──
+  useEffect(() => {
+    if (activeTab !== 'seasons') return;
+    setSeasonLoading(true);
+    fetch(`${apiBase}/seasons?season=${seasonTab}`)
+      .then((r) => r.ok ? r.json() : { spots: [] })
+      .then((d) => setSeasonSpots(d.spots ?? []))
+      .catch(() => {})
+      .finally(() => setSeasonLoading(false));
+    fetch(`${apiBase}/seasons/covers`)
+      .then((r) => r.ok ? r.json() : {})
+      .then((d) => setSeasonCovers(d))
+      .catch(() => {});
+  }, [activeTab, seasonTab]);
 
   // ── Load announcements when tab is activated ──
   useEffect(() => {
@@ -882,13 +940,13 @@ export default function AdminPage() {
         </div>
 
         <div className="flex overflow-x-auto border-b border-white/10 mb-8">
-          {(['images', 'videos', 'plans', 'layout', 'contact', 'surroundings', 'announcements'] as Tab[]).map((tab) => (
+          {(['images', 'videos', 'plans', 'layout', 'contact', 'surroundings', 'seasons', 'announcements'] as Tab[]).map((tab) => (
             <button key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 sm:px-6 py-3 flex-shrink-0 font-display text-sm uppercase tracking-widest transition-all duration-300 relative ${
                 activeTab === tab ? 'text-gold border-b-2 border-gold' : 'text-white/30 hover:text-white/60'
               }`}>
-              {tab === 'images' ? 'Images' : tab === 'videos' ? 'Videos' : tab === 'plans' ? 'Plans' : tab === 'layout' ? 'Layout' : tab === 'contact' ? 'Contact' : tab === 'surroundings' ? 'Surroundings' : 'Announcements'}
+              {tab === 'images' ? 'Images' : tab === 'videos' ? 'Videos' : tab === 'plans' ? 'Plans' : tab === 'layout' ? 'Layout' : tab === 'contact' ? 'Contact' : tab === 'surroundings' ? 'Surroundings' : tab === 'seasons' ? 'Seasons' : 'Announcements'}
               {tab === 'layout' && hasLayoutChanges && (
                 <span className="ml-2 bg-gold text-black text-[8px] font-display px-1.5 py-0.5 rounded-sm">{changeCount}</span>
               )}
@@ -2748,6 +2806,500 @@ export default function AdminPage() {
                 </>
               )}
             </div>
+          );
+        })()}
+
+        {/* ══════════════════ SEASONS TAB ══════════════════ */}
+        {activeTab === 'seasons' && (() => {
+          const SEASON_KEYS = ['spring', 'summer', 'autumn', 'winter'] as const;
+          const SEASON_LABEL: Record<string, string> = {
+            spring: '春 Spring', summer: '夏 Summer', autumn: '秋 Autumn', winter: '冬 Winter',
+          };
+
+          const setSf = (patch: Partial<SeasonSpotAdmin>) =>
+            setSeasonForm((p) => ({ ...p, ...patch }));
+
+          const reloadSeasons = () => {
+            setSeasonLoading(true);
+            fetch(`${apiBase}/seasons?season=${seasonTab}`)
+              .then((r) => r.ok ? r.json() : { spots: [] })
+              .then((d) => setSeasonSpots(d.spots ?? []))
+              .catch(() => {})
+              .finally(() => setSeasonLoading(false));
+          };
+
+          const handleActiveToggle = async (spot: SeasonSpotAdmin) => {
+            const next = !spot.isActive;
+            setSeasonSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, isActive: next } : s));
+            await fetch(`${apiBase}/seasons/${spot.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...spot, isActive: next }),
+            });
+          };
+
+          const handleDelete = async (id: number) => {
+            if (!confirm('このスポットを削除しますか？')) return;
+            await fetch(`${apiBase}/seasons/${id}`, { method: 'DELETE' });
+            setSeasonSpots((prev) => prev.filter((s) => s.id !== id));
+            if (seasonEditId === id) setSeasonEditId(null);
+          };
+
+          const handleSave = async () => {
+            setSeasonSaving(true);
+            try {
+              const isNew = seasonForm.id === null;
+              const url   = isNew ? `${apiBase}/seasons` : `${apiBase}/seasons/${seasonForm.id}`;
+              const method = isNew ? 'POST' : 'PUT';
+              const body  = { ...seasonForm, season: isNew ? seasonTab : seasonForm.season };
+              const res   = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+              });
+              if (res.ok) {
+                reloadSeasons();
+                setSeasonEditId(null);
+                showMessage('success', 'Saved.');
+              } else {
+                showMessage('error', 'Save failed.');
+              }
+            } catch {
+              showMessage('error', 'Save failed.');
+            } finally {
+              setSeasonSaving(false);
+            }
+          };
+
+          const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, spotId: number) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setSeasonUploading(true);
+            try {
+              const fd = new FormData();
+              fd.append('file', file);
+              fd.append('seasonId', String(spotId));
+              const res = await fetch(`${apiBase}/seasons/upload`, { method: 'POST', body: fd });
+              if (res.ok) {
+                const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
+                setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
+                if (seasonForm.id === spotId) setSeasonForm(updated);
+                showMessage('success', 'Image uploaded.');
+              } else {
+                showMessage('error', 'Upload failed.');
+              }
+            } catch {
+              showMessage('error', 'Upload failed.');
+            } finally {
+              setSeasonUploading(false);
+              e.target.value = '';
+            }
+          };
+
+          const handleSetMainImage = async (spotId: number, imgId: number) => {
+            await fetch(`${apiBase}/seasons/${spotId}/images/${imgId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ isMain: true }),
+            });
+            const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
+            setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
+            if (seasonForm.id === spotId) setSeasonForm(updated);
+          };
+
+          const handleDeleteImage = async (spotId: number, imgId: number) => {
+            if (!confirm('画像を削除しますか？')) return;
+            await fetch(`${apiBase}/seasons/${spotId}/images/${imgId}`, { method: 'DELETE' });
+            const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
+            setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
+            if (seasonForm.id === spotId) setSeasonForm(updated);
+          };
+
+          const sf = seasonForm;
+
+          return (
+            <>
+            <div className="space-y-6">
+              {/* Season sub-tabs */}
+              <div className="flex gap-0 border border-white/10">
+                {SEASON_KEYS.map((s) => (
+                  <button key={s} onClick={() => { setSeasonTab(s); setSeasonEditId(null); }}
+                    className={`flex-1 py-2.5 font-display text-[10px] uppercase tracking-widest transition-colors ${
+                      seasonTab === s ? 'bg-gold text-black' : 'text-white/30 hover:text-white/60'
+                    }`}>
+                    {SEASON_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+
+              {/* ── Season Cover Images ── */}
+              <div className="border border-white/10 p-4 bg-white/2">
+                <h3 className="font-display text-gold text-xs uppercase tracking-widest mb-4">
+                  Top Page Season Cover Images
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {SEASON_KEYS.map((s) => (
+                    <div key={s} className="flex flex-col gap-2">
+                      <p className="font-display text-[10px] uppercase tracking-widest text-white/50">{SEASON_LABEL[s]}</p>
+                      <div className="relative aspect-[3/4] bg-white/5 border border-white/10 overflow-hidden">
+                        {seasonCovers[s] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={seasonCovers[s]!} alt={s} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-white/15 text-[10px] font-display uppercase">No image</span>
+                          </div>
+                        )}
+                        {coverUploading === s && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <span className="text-gold text-[10px] font-display uppercase tracking-widest">Uploading…</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          className="flex-1 px-2 py-1.5 bg-gold/20 hover:bg-gold/30 text-gold font-display text-[9px] uppercase tracking-widest text-center transition-colors"
+                          onClick={() => {
+                            const season = s;
+                            setPickerCallback(() => async (url: string) => {
+                              const res = await fetch(`${apiBase}/seasons/covers`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ season, imageUrl: url }),
+                              });
+                              if (res.ok) {
+                                setSeasonCovers((prev) => ({ ...prev, [season]: url }));
+                                showMessage('success', `${SEASON_LABEL[season]} cover updated.`);
+                              } else {
+                                showMessage('error', 'Failed.');
+                              }
+                            });
+                            if (!pickerImages) {
+                              fetch(apiBase + '/media/images')
+                                .then((r) => r.ok ? r.json() : [])
+                                .then((imgs: MediaFile[]) => setPickerImages(imgs.filter((f) => f.type === 'image')))
+                                .catch(() => setPickerImages([]));
+                            }
+                            setPickerOpen(true);
+                          }}
+                        >
+                          {seasonCovers[s] ? 'Change' : 'Select'}
+                        </button>
+                        {seasonCovers[s] && (
+                          <button
+                            className="px-2 py-1.5 border border-red-500/30 text-red-400/70 hover:text-red-400 font-display text-[9px] uppercase tracking-widest transition-colors"
+                            onClick={async () => {
+                              if (!confirm(`Remove ${SEASON_LABEL[s]} cover image?`)) return;
+                              await fetch(`${apiBase}/seasons/covers?season=${s}`, { method: 'DELETE' });
+                              setSeasonCovers((prev) => ({ ...prev, [s]: null }));
+                              showMessage('success', 'Removed.');
+                            }}
+                          >✕</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Header row */}
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-gold text-xs uppercase tracking-widest">
+                  {SEASON_LABEL[seasonTab]} Spots ({seasonSpots.length})
+                </h3>
+                <button
+                  onClick={() => { setSeasonForm({ ...blankSeason(), season: seasonTab }); setSeasonEditId('new'); }}
+                  className="px-4 py-2 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors"
+                >
+                  + Add Spot
+                </button>
+              </div>
+
+              {/* Spot list */}
+              {seasonLoading ? (
+                <p className="text-white/30 text-xs font-display uppercase tracking-widest">Loading...</p>
+              ) : (
+                <div className="space-y-3">
+                  {seasonSpots.map((spot) => {
+                    const mainImg = spot.images.find((i) => i.isMain) ?? spot.images[0] ?? null;
+                    return (
+                      <div key={spot.id} className="border border-white/10 bg-white/2">
+                        {/* Row */}
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          {/* Thumbnail */}
+                          <div className="w-14 h-10 flex-shrink-0 border border-white/10 overflow-hidden bg-white/5">
+                            {mainImg ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={mainImg.imageUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <span className="text-white/10 text-[8px]">no img</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-display text-white/80 text-sm truncate">
+                              {spot.nameJa || spot.nameEn}
+                              {spot.isFeatured && (
+                                <span className="ml-2 text-[9px] bg-gold/20 text-gold px-1.5 py-0.5 font-display uppercase tracking-widest">Featured</span>
+                              )}
+                            </p>
+                            <p className="font-display text-[10px] text-gold/50 uppercase tracking-widest">
+                              {spot.distanceMin}min · {spot.images.length} images
+                            </p>
+                          </div>
+                          {/* Active toggle */}
+                          <button type="button" onClick={() => handleActiveToggle(spot)}
+                            className={`w-10 h-5 rounded-full transition-colors duration-200 relative flex-shrink-0 ${spot.isActive ? 'bg-gold' : 'bg-white/10'}`}
+                            title={spot.isActive ? 'Active' : 'Hidden'}>
+                            <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${spot.isActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                          </button>
+                          {/* Edit / Delete */}
+                          <button
+                            onClick={() => { if (seasonEditId === spot.id) { setSeasonEditId(null); } else { setSeasonForm({ ...spot }); setSeasonEditId(spot.id!); } }}
+                            className="font-display text-[10px] uppercase tracking-widest text-gold/60 hover:text-gold border border-gold/20 hover:border-gold/40 px-3 py-1 transition-colors">
+                            {seasonEditId === spot.id ? 'Close' : 'Edit'}
+                          </button>
+                          <button onClick={() => handleDelete(spot.id!)}
+                            className="font-display text-[10px] uppercase tracking-widest text-white/20 hover:text-red-400 border border-white/10 hover:border-red-500/30 px-3 py-1 transition-colors">
+                            Del
+                          </button>
+                        </div>
+
+                        {/* Edit panel */}
+                        {seasonEditId === spot.id && (
+                          <div className="border-t border-white/10 px-4 py-5 space-y-4 bg-black/20">
+                            {/* Season + Distance + Order */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Season</label>
+                                <select value={sf.season} onChange={(e) => setSf({ season: e.target.value as any })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40">
+                                  {SEASON_KEYS.map((s) => <option key={s} value={s}>{SEASON_LABEL[s]}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Distance (min)</label>
+                                <input type="number" value={sf.distanceMin} onChange={(e) => setSf({ distanceMin: Number(e.target.value) })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Order</label>
+                                <input type="number" value={sf.displayOrder} onChange={(e) => setSf({ displayOrder: Number(e.target.value) })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                              </div>
+                            </div>
+                            {/* Featured toggle */}
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input type="checkbox" checked={sf.isFeatured} onChange={(e) => setSf({ isFeatured: e.target.checked })}
+                                className="w-4 h-4 accent-yellow-500" />
+                              <span className="font-display text-[10px] uppercase tracking-widest text-gold/60">Featured (大カード表示)</span>
+                            </label>
+                            {/* Names */}
+                            {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                              <div key={l} className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Name ({l})</label>
+                                <input type="text" value={sf[`name${l}`]} onChange={(e) => setSf({ [`name${l}`]: e.target.value })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                              </div>
+                            ))}
+                            {/* Descriptions */}
+                            {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                              <div key={l} className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Description ({l})</label>
+                                <textarea rows={3} value={sf[`desc${l}`]} onChange={(e) => setSf({ [`desc${l}`]: e.target.value })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40 resize-none w-full" />
+                              </div>
+                            ))}
+                            {/* Access */}
+                            {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                              <div key={l} className="flex flex-col gap-1">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Access ({l})</label>
+                                <input type="text" value={sf[`access${l}`]} onChange={(e) => setSf({ [`access${l}`]: e.target.value })}
+                                  className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                              </div>
+                            ))}
+                            {/* Save */}
+                            <button onClick={handleSave} disabled={seasonSaving}
+                              className="px-8 py-2.5 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
+                              {seasonSaving ? 'Saving...' : 'Save'}
+                            </button>
+
+                            {/* ── Image management ── */}
+                            <div className="pt-4 border-t border-white/10 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">
+                                  Images ({spot.images.length})
+                                </label>
+                                <button
+                                  className="px-3 py-1 border border-gold/30 font-display text-[10px] uppercase tracking-widest text-gold/60 hover:text-gold hover:border-gold/60 transition-colors"
+                                  onClick={() => {
+                                    const spotId = spot.id!;
+                                    const isFirst = spot.images.length === 0;
+                                    setPickerCallback(() => async (url: string) => {
+                                      const res = await fetch(`${apiBase}/seasons/${spotId}/images/select`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ imageUrl: url, isMain: isFirst }),
+                                      });
+                                      if (res.ok) {
+                                        const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
+                                        setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
+                                        if (seasonForm.id === spotId) setSeasonForm(updated);
+                                        showMessage('success', 'Image added.');
+                                      } else {
+                                        showMessage('error', 'Failed.');
+                                      }
+                                    });
+                                    if (!pickerImages) {
+                                      fetch(apiBase + '/media/images')
+                                        .then((r) => r.ok ? r.json() : [])
+                                        .then((imgs: MediaFile[]) => setPickerImages(imgs.filter((f) => f.type === 'image')))
+                                        .catch(() => setPickerImages([]));
+                                    }
+                                    setPickerOpen(true);
+                                  }}
+                                >
+                                  + Select from Gallery
+                                </button>
+                              </div>
+                              {spot.images.length > 0 && (
+                                <div className="grid grid-cols-4 gap-2">
+                                  {spot.images.map((img) => (
+                                    <div key={img.id} className={`relative aspect-square border overflow-hidden ${img.isMain ? 'border-gold' : 'border-white/10'}`}>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={img.imageUrl} alt="" className="w-full h-full object-cover" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                                        {!img.isMain && (
+                                          <button onClick={() => handleSetMainImage(spot.id!, img.id)}
+                                            className="text-[8px] font-display uppercase tracking-widest bg-gold text-black px-2 py-0.5">
+                                            Set Main
+                                          </button>
+                                        )}
+                                        {img.isMain && (
+                                          <span className="text-[8px] font-display uppercase tracking-widest text-gold">✓ Main</span>
+                                        )}
+                                        <button onClick={() => handleDeleteImage(spot.id!, img.id)}
+                                          className="text-[8px] font-display uppercase tracking-widest text-red-400 border border-red-500/30 px-2 py-0.5">
+                                          Delete
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* New spot form */}
+              {seasonEditId === 'new' && (
+                <div className="border border-gold/20 bg-black/20 p-5 space-y-4">
+                  <h4 className="font-display text-gold text-xs uppercase tracking-widest">New Spot — {SEASON_LABEL[seasonTab]}</h4>
+                  {/* Season + Distance + Order */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Season</label>
+                      <select value={sf.season} onChange={(e) => setSf({ season: e.target.value as any })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40">
+                        {SEASON_KEYS.map((s) => <option key={s} value={s}>{SEASON_LABEL[s]}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Distance (min)</label>
+                      <input type="number" value={sf.distanceMin} onChange={(e) => setSf({ distanceMin: Number(e.target.value) })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Order</label>
+                      <input type="number" value={sf.displayOrder} onChange={(e) => setSf({ displayOrder: Number(e.target.value) })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                    </div>
+                  </div>
+                  {/* Featured */}
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="checkbox" checked={sf.isFeatured} onChange={(e) => setSf({ isFeatured: e.target.checked })}
+                      className="w-4 h-4 accent-yellow-500" />
+                    <span className="font-display text-[10px] uppercase tracking-widest text-gold/60">Featured (大カード表示)</span>
+                  </label>
+                  {/* Names */}
+                  {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                    <div key={l} className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Name ({l})</label>
+                      <input type="text" value={sf[`name${l}`]} onChange={(e) => setSf({ [`name${l}`]: e.target.value })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                    </div>
+                  ))}
+                  {/* Descriptions */}
+                  {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                    <div key={l} className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Description ({l})</label>
+                      <textarea rows={3} value={sf[`desc${l}`]} onChange={(e) => setSf({ [`desc${l}`]: e.target.value })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40 resize-none w-full" />
+                    </div>
+                  ))}
+                  {/* Access */}
+                  {(['Zh', 'Ja', 'En'] as const).map((l) => (
+                    <div key={l} className="flex flex-col gap-1">
+                      <label className="font-display text-[10px] uppercase tracking-widest text-gold/60">Access ({l})</label>
+                      <input type="text" value={sf[`access${l}`]} onChange={(e) => setSf({ [`access${l}`]: e.target.value })}
+                        className="bg-white/5 border border-white/10 px-3 py-2 text-sm text-white/80 font-display focus:outline-none focus:border-gold/40" />
+                    </div>
+                  ))}
+                  <div className="flex gap-3">
+                    <button onClick={handleSave} disabled={seasonSaving}
+                      className="px-8 py-2.5 bg-gold text-black font-display text-xs uppercase tracking-widest hover:bg-gold/80 transition-colors disabled:opacity-50">
+                      {seasonSaving ? 'Saving...' : 'Save'}
+                    </button>
+                    <button onClick={() => setSeasonEditId(null)}
+                      className="px-4 py-2.5 border border-white/10 font-display text-xs uppercase tracking-widest text-white/30 hover:text-white/60 transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Image Picker Modal ── */}
+            {pickerOpen && (
+              <div className="fixed inset-0 bg-black/95 z-[200] flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
+                  <h3 className="font-display text-gold text-xs uppercase tracking-widest">Select Image from Gallery</h3>
+                  <button onClick={() => setPickerOpen(false)} className="text-white/40 hover:text-gold text-xl leading-none">✕</button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6">
+                  {!pickerImages ? (
+                    <p className="text-white/30 text-xs font-display uppercase tracking-widest">Loading…</p>
+                  ) : pickerImages.length === 0 ? (
+                    <p className="text-white/30 text-xs font-display uppercase tracking-widest">No images in gallery yet. Upload images in the Images tab first.</p>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+                      {pickerImages.map((img) => (
+                        <button
+                          key={img.id}
+                          className="relative aspect-square border border-white/10 hover:border-gold overflow-hidden group transition-colors"
+                          onClick={async () => {
+                            setPickerOpen(false);
+                            if (pickerCallback) await pickerCallback(img.url);
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={img.url} alt={img.name} className="w-full h-full object-cover group-hover:opacity-80 transition-opacity" />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            </>
           );
         })()}
 
