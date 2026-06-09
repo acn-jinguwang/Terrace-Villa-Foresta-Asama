@@ -22,7 +22,7 @@ phases:
         else
           BUILD_ARGS=""
         fi
-        docker build $BUILD_ARGS -t $ECR_URI:$IMAGE_TAG ./frontend
+        docker build --no-cache $BUILD_ARGS -t $ECR_URI:$IMAGE_TAG ./frontend
       - docker tag $ECR_URI:$IMAGE_TAG $ECR_URI:latest
 
   post_build:
