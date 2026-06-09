@@ -3,6 +3,8 @@
 import { useState, FormEvent } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -17,7 +19,7 @@ export default function AdminLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${BASE}/api/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ username, password }),
