@@ -1,5 +1,10 @@
 version: 0.2
 
+# IMAGE_TAG controls what gets built and pushed:
+#   staging  → develop branch → ECR:staging → TEST ECS
+#   latest   → master branch  → ECR:latest  → PRODUCTION ECS
+# The :latest tag is NEVER touched by a staging build.
+
 env:
   variables:
     AWS_DEFAULT_REGION: ap-northeast-1
@@ -15,19 +20,18 @@ phases:
 
   build:
     commands:
-      - echo Building Docker image...
+      - echo Building Docker image with IMAGE_TAG=$IMAGE_TAG ...
       - |
-        if [ "$IMAGE_TAG" = "test" ]; then
+        if [ "$IMAGE_TAG" = "staging" ] || [ "$IMAGE_TAG" = "test" ]; then
           BUILD_ARGS="--build-arg NEXT_PUBLIC_BASE_PATH=/test"
         else
           BUILD_ARGS=""
         fi
         docker build --no-cache $BUILD_ARGS -t $ECR_URI:$IMAGE_TAG ./frontend
-      - if [ "$IMAGE_TAG" != "test" ]; then docker tag $ECR_URI:$IMAGE_TAG $ECR_URI:latest; fi
+      - if [ "$IMAGE_TAG" = "latest" ]; then docker tag $ECR_URI:latest $ECR_URI:latest; fi
 
   post_build:
     commands:
       - echo Pushing Docker image to ECR...
       - docker push $ECR_URI:$IMAGE_TAG
-      - if [ "$IMAGE_TAG" != "test" ]; then docker push $ECR_URI:latest; fi
-      - echo Build complete.
+      - echo Build complete. Tag=$IMAGE_TAG
