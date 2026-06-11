@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const isTest = isTestReq(request);
-    await runMigration(isTest);
+    await runMigration();
     const db = getDb(isTest);
     const results = [];
 

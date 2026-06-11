@@ -5,7 +5,7 @@ import { normalizeUrl } from '@/lib/s3';
 export async function GET(request: Request) {
   try {
     const isTest = isTestReq(request);
-    await runMigration(isTest);
+    await runMigration();
     const db = getDb(isTest);
     const [rows] = await db.query(
       'SELECT * FROM media WHERE type = ? ORDER BY sort_order ASC, created_at DESC',

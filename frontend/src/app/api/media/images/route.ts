@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
 
     const isTest = isTestReq(request);
-    await runMigration(isTest);
+    await runMigration();
     const db = getDb(isTest);
     const sql = category
       ? 'SELECT * FROM media WHERE type = ? AND category = ? ORDER BY sort_order ASC, created_at DESC'
