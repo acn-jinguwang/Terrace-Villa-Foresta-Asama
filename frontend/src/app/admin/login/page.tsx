@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+
+const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const apiBase = (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/api';
+  const pathname = usePathname();
+  const adminBase = pathname.startsWith('/test') ? '/test/admin' : '/admin';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
@@ -16,13 +19,13 @@ export default function AdminLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(apiBase + '/auth/login', {
+      const res = await fetch(`${BASE}/api/auth/login`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ username, password }),
       });
       if (res.ok) {
-        router.push('/admin');
+        router.push(adminBase);
       } else {
         const data = await res.json();
         setError(data.error || 'Invalid credentials');

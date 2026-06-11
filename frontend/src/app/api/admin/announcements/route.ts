@@ -20,7 +20,6 @@ function rowToAnnouncement(r: any) {
   };
 }
 
-// GET /api/admin/announcements — list all
 export async function GET(request: Request) {
   try {
     const isTest = isTestReq(request);
@@ -39,7 +38,6 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/admin/announcements — create
 export async function POST(request: Request) {
   try {
     const isTest = isTestReq(request);

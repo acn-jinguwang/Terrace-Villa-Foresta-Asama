@@ -19,6 +19,16 @@ const config: Config = {
           secondary: '#0a0a0a',
           tertiary: '#111111',
         },
+        theme: {
+          bg:       'var(--bg)',
+          'bg-2':   'var(--bg-2)',
+          paper:    'var(--paper)',
+          ink:      'var(--ink)',
+          'ink-soft': 'var(--ink-soft)',
+          'ink-mute': 'var(--ink-mute)',
+          accent:   'var(--accent)',
+          'accent-2': 'var(--accent-2)',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

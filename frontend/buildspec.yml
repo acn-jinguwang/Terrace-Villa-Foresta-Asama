@@ -22,12 +22,12 @@ phases:
         else
           BUILD_ARGS=""
         fi
-        docker build $BUILD_ARGS -t $ECR_URI:$IMAGE_TAG ./frontend
-      - docker tag $ECR_URI:$IMAGE_TAG $ECR_URI:latest
+        docker build --no-cache $BUILD_ARGS -t $ECR_URI:$IMAGE_TAG ./frontend
+      - if [ "$IMAGE_TAG" != "test" ]; then docker tag $ECR_URI:$IMAGE_TAG $ECR_URI:latest; fi
 
   post_build:
     commands:
       - echo Pushing Docker image to ECR...
       - docker push $ECR_URI:$IMAGE_TAG
-      - docker push $ECR_URI:latest
+      - if [ "$IMAGE_TAG" != "test" ]; then docker push $ECR_URI:latest; fi
       - echo Build complete.

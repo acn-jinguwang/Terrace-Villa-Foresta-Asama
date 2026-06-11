@@ -1,7 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  // For test env: static assets served from /test/_next/static/ so ALB routes them correctly
+  assetPrefix: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  async rewrites() {
+    // TEST env: ALB routes /test/* → this container, but API routes live at /api/*.
+    // Rewrite /test/api/:path* → /api/:path* so browser calls to /test/api/... resolve internally.
+    if (process.env.NEXT_PUBLIC_BASE_PATH === '/test') {
+      return [{ source: '/test/api/:path*', destination: '/api/:path*' }];
+    }
+    return [];
+  },
   images: {
     remotePatterns: [
       {

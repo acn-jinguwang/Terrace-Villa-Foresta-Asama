@@ -3,6 +3,7 @@ import './globals.css';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import AnnouncementBanner from '@/components/AnnouncementBanner';
 
 export const metadata: Metadata = {
@@ -36,6 +37,7 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
+          <ThemeSwitcher />
         </LanguageProvider>
       </body>
     </html>

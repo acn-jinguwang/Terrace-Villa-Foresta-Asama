@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
+import { FadeUp } from '@/components/animation/FadeUp';
 
 interface MediaItem {
   id: string;
@@ -236,7 +237,7 @@ export default function HomePage() {
                   alt={`Terrace Villa Foresta Asama ${idx + 1}`}
                   fill
                   unoptimized
-                  className="object-cover brightness-50 animate-kenburns"
+                  className="object-cover brightness-50 foresta-img-drift"
                   priority={idx === 0}
                 />
               </div>
@@ -347,16 +348,16 @@ export default function HomePage() {
             </div>
 
             {/* Image Grid — shows uploaded hotel images or placeholders */}
-            <div className="grid grid-cols-2 gap-4">
+            <FadeUp delay={1} className="grid grid-cols-2 gap-4">
               {/* Left tall image */}
-              <div className="relative aspect-[3/4] overflow-hidden border border-white/10">
+              <div className="foresta-img-hover relative aspect-[3/4] border border-white/10">
                 {getHotelImage(0) ? (
                   <Image
                     src={getHotelImage(0)!.url}
                     alt={getHotelImage(0)!.name}
                     fill
                     unoptimized
-                    className="object-cover animate-kenburns"
+                    className="object-cover"
                   />
                 ) : (
                   <PlaceholderCell label="Interior" />
@@ -365,34 +366,34 @@ export default function HomePage() {
 
               {/* Right: two stacked images */}
               <div className="grid grid-rows-2 gap-4">
-                <div className="relative aspect-square overflow-hidden border border-white/10">
+                <div className="foresta-img-hover relative aspect-square border border-white/10">
                   {getHotelImage(1) ? (
                     <Image
                       src={getHotelImage(1)!.url}
                       alt={getHotelImage(1)!.name}
                       fill
                       unoptimized
-                      className="object-cover animate-kenburns-reverse"
+                      className="object-cover"
                     />
                   ) : (
                     <PlaceholderCell label="Terrace" />
                   )}
                 </div>
-                <div className="relative aspect-square overflow-hidden border border-white/10">
+                <div className="foresta-img-hover relative aspect-square border border-white/10">
                   {getHotelImage(2) ? (
                     <Image
                       src={getHotelImage(2)!.url}
                       alt={getHotelImage(2)!.name}
                       fill
                       unoptimized
-                      className="object-cover animate-kenburns"
+                      className="object-cover"
                     />
                   ) : (
                     <PlaceholderCell label="Asama" />
                   )}
                 </div>
               </div>
-            </div>
+            </FadeUp>
           </div>
         </div>
       </section>
@@ -401,11 +402,11 @@ export default function HomePage() {
       <section className="py-16 px-6 bg-white/2 border-y border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featureItems.map((item) => {
+            {featureItems.map((item, featureIdx) => {
               const featureData = translations.top.features[item.key as keyof typeof translations.top.features];
               return (
+                <FadeUp key={item.key} delay={(featureIdx + 1) as 1|2|3|4}>
                 <div
-                  key={item.key}
                   className="flex flex-col items-center text-center p-8 border border-white/5 hover:border-gold/20 transition-all duration-500 group"
                 >
                   <div className="text-gold/60 group-hover:text-gold mb-4 transition-colors duration-300">
@@ -419,6 +420,7 @@ export default function HomePage() {
                     {t(featureData.desc)}
                   </p>
                 </div>
+                </FadeUp>
               );
             })}
           </div>
@@ -574,13 +576,13 @@ export default function HomePage() {
               const coverSrc = plan.coverImage || `/images/plans/${plan.id}.jpg`;
               return (
                 <Link href={`/plans/${plan.id}`} key={plan.id} className="luxury-card group block overflow-hidden">
-                  <div className="relative aspect-[4/3] overflow-hidden bg-white/5">
+                  <div className="foresta-img-hover relative aspect-[4/3] bg-white/5">
                     <Image
                       src={coverSrc}
                       alt={getPlanTitle(plan)}
                       fill
                       unoptimized
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      className="object-cover"
                       onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-dark/80 to-transparent" />

@@ -5,7 +5,9 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // ── /test/api/* → /api/* にリライトし x-test-mode ヘッダーを付与 ──────────
-  if (pathname.startsWith('/test/api/')) {
+  // site-settings routes are handled directly by app/test/api/site-settings/route.ts
+  const DIRECT_TEST_ROUTES = ['/test/api/site-settings', '/test/api/admin/site-settings'];
+  if (pathname.startsWith('/test/api/') && !DIRECT_TEST_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))) {
     const rewritePath = pathname.replace('/test/api/', '/api/');
     const url = request.nextUrl.clone();
     url.pathname = rewritePath;

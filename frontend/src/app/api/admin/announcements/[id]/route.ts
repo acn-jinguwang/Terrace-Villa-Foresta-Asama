@@ -4,7 +4,6 @@ import { getDb, isTestReq, ensureAnnouncementsTable } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 const NO_CACHE = { 'Cache-Control': 'no-store' };
 
-// PUT /api/admin/announcements/:id — update
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -57,7 +56,6 @@ export async function PUT(
   }
 }
 
-// DELETE /api/admin/announcements/:id
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -75,7 +73,6 @@ export async function DELETE(
   }
 }
 
-// PATCH /api/admin/announcements/:id — toggle is_active
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },

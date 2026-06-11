@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { translations } from '@/i18n/translations';
 
@@ -12,9 +12,7 @@ type Tab = 'images' | 'videos' | 'plans' | 'layout' | 'contact' | 'surroundings'
 
 interface AnnouncementItem {
   id: number;
-  messageCn: string;
-  messageJa: string;
-  messageEn: string;
+  messageCn: string; messageJa: string; messageEn: string;
   startsAt: string;
   endsAt: string | null;
   isActive: boolean;
@@ -171,7 +169,14 @@ const SECTION_MAX: Record<string, number> = {
 export default function AdminPage() {
   const { t } = useLanguage();
   const router = useRouter();
-  const apiBase = (process.env.NEXT_PUBLIC_BASE_PATH || '') + '/api';
+  const pathname = usePathname();
+  const adminBase = pathname.startsWith('/test') ? '/test/admin' : '/admin';
+  const apiBase = pathname.startsWith('/test') ? '/test/api' : '/api';
+
+  // Admin は常に Onyx テーマで表示
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'onyx');
+  }, []);
 
   // ── Media state ──
   const [activeTab, setActiveTab]       = useState<Tab>('images');
@@ -276,22 +281,6 @@ export default function AdminPage() {
   const [pickerCallback, setPickerCallback] = useState<((url: string) => Promise<void>) | null>(null);
   const [pickerImages, setPickerImages]     = useState<MediaFile[] | null>(null);
 
-  // ── Announcements state ──
-  const blankAnnouncement = (): Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'> => ({
-    messageCn: '', messageJa: '', messageEn: '',
-    startsAt: new Date().toISOString().slice(0, 16),
-    endsAt: null,
-    isActive: true,
-    styleVariant: 'default',
-    scrollSpeed: 30,
-  });
-  const [announcements, setAnnouncements]       = useState<AnnouncementItem[]>([]);
-  const [announcementLoading, setAnnouncementLoading] = useState(false);
-  const [announcementSaving, setAnnouncementSaving]   = useState(false);
-  const [announcementEditId, setAnnouncementEditId]   = useState<number | 'new' | null>(null);
-  const [announcementForm, setAnnouncementForm]       = useState<Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'>>(blankAnnouncement());
-  const [announcementPreviewLang, setAnnouncementPreviewLang] = useState<'ja' | 'cn' | 'en'>('ja');
-
   // ── Contact state ──
   const [contactForm, setContactForm] = useState({
     phone: '', phoneVisible: true,
@@ -302,6 +291,19 @@ export default function AdminPage() {
   const [contactLoading, setContactLoading] = useState(false);
   const [contactSaving, setContactSaving]   = useState(false);
   const [contactImagePickerFor, setContactImagePickerFor] = useState<'line' | 'wechat' | null>(null);
+
+  // ── Announcements state ──
+  const blankAnnouncement = (): Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'> => ({
+    messageCn: '', messageJa: '', messageEn: '',
+    startsAt: new Date().toISOString().slice(0, 16),
+    endsAt: null, isActive: true, styleVariant: 'default', scrollSpeed: 30,
+  });
+  const [announcements, setAnnouncements]       = useState<AnnouncementItem[]>([]);
+  const [announcementLoading, setAnnouncementLoading] = useState(false);
+  const [announcementSaving, setAnnouncementSaving]   = useState(false);
+  const [announcementEditId, setAnnouncementEditId]   = useState<number | 'new' | null>(null);
+  const [announcementForm, setAnnouncementForm]       = useState<Omit<AnnouncementItem, 'id' | 'createdAt' | 'updatedAt'>>(blankAnnouncement());
+  const [announcementPreviewLang, setAnnouncementPreviewLang] = useState<'ja' | 'cn' | 'en'>('ja');
 
   // ── Computed ──
   const currentLayout  = draftLayout ?? savedLayout;
@@ -325,7 +327,7 @@ export default function AdminPage() {
 
   const handleLogout = async () => {
     await fetch(apiBase + '/auth/logout', { method: 'POST' });
-    router.push('/admin/login');
+    router.push(adminBase + '/login');
   };
 
   // ─── Load data ────────────────────────────────────────────────────────────
@@ -372,6 +374,17 @@ export default function AdminPage() {
       .finally(() => setSurroundingLoading(false));
   }, [activeTab]);
 
+  // ── Load contact when tab is activated ──
+  useEffect(() => {
+    if (activeTab !== 'contact') return;
+    setContactLoading(true);
+    fetch(apiBase + '/contact')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setContactForm(d); })
+      .catch(() => {})
+      .finally(() => setContactLoading(false));
+  }, [activeTab]);
+
   // ── Load seasons when tab or season filter changes ──
   useEffect(() => {
     if (activeTab !== 'seasons') return;
@@ -396,17 +409,6 @@ export default function AdminPage() {
       .then((d) => setAnnouncements(d.announcements ?? []))
       .catch(() => {})
       .finally(() => setAnnouncementLoading(false));
-  }, [activeTab]);
-
-  // ── Load contact when tab is activated ──
-  useEffect(() => {
-    if (activeTab !== 'contact') return;
-    setContactLoading(true);
-    fetch(apiBase + '/contact')
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setContactForm(d); })
-      .catch(() => {})
-      .finally(() => setContactLoading(false));
   }, [activeTab]);
 
   // ─── Upload ──────────────────────────────────────────────────────────────
@@ -475,7 +477,7 @@ export default function AdminPage() {
     if (usage) { showMessage('error', `削除不可 — 使用中: ${usage}`); return; }
     if (!window.confirm('Are you sure you want to delete this file?')) return;
     try {
-      const res = await fetch(apiBase + `/media/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${apiBase}/media/${id}`, { method: 'DELETE' });
       if (res.ok) { setFiles((prev) => prev.filter((f) => f.id !== id)); showMessage('success', 'ファイルを削除しました'); }
       else showMessage('error', t(translations.common.error));
     } catch { showMessage('error', t(translations.common.error)); }
@@ -485,7 +487,7 @@ export default function AdminPage() {
 
   const handleToggleVisible = async (plan: PlanEntry) => {
     try {
-      const res = await fetch(apiBase + `/plans/${plan.id}`, {
+      const res = await fetch(`${apiBase}/plans/${plan.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ visible: !plan.visible }),
       });
@@ -500,7 +502,7 @@ export default function AdminPage() {
   const handleDeletePlan = async (id: string) => {
     if (!window.confirm('Delete this plan? This cannot be undone.')) return;
     try {
-      const res = await fetch(apiBase + `/plans/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${apiBase}/plans/${id}`, { method: 'DELETE' });
       if (res.ok) { setPlans((prev) => prev.filter((p) => p.id !== id)); showMessage('success', 'プランを削除しました'); }
       else showMessage('error', t(translations.common.error));
     } catch { showMessage('error', t(translations.common.error)); }
@@ -540,7 +542,7 @@ export default function AdminPage() {
     setEditorImagePickerCtx(null);
     // fetch full plan data
     try {
-      const res = await fetch(apiBase + `/plans/${plan.id}`);
+      const res = await fetch(`${apiBase}/plans/${plan.id}`);
       if (res.ok) {
         const full = await res.json();
         setEditorForm({
@@ -629,7 +631,7 @@ export default function AdminPage() {
     try {
       const f = editorForm;
       // 1. PUT basic plan data
-      const planRes = await fetch(apiBase + `/plans/${planEditorId}`, {
+      const planRes = await fetch(`${apiBase}/plans/${planEditorId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -652,7 +654,7 @@ export default function AdminPage() {
         descriptionZh: h.descriptionZh, descriptionJa: h.descriptionJa, descriptionEn: h.descriptionEn,
         imageUrl: h.imageUrl,
       }));
-      const hlRes = await fetch(apiBase + `/plans/${planEditorId}/highlights`, {
+      const hlRes = await fetch(`${apiBase}/plans/${planEditorId}/highlights`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(highlightsPayload),
@@ -670,7 +672,7 @@ export default function AdminPage() {
         mealLunchZh:   d.mealLunchZh,   mealLunchJa:   d.mealLunchJa,   mealLunchEn:   d.mealLunchEn,
         mealDinnerZh:  d.mealDinnerZh,  mealDinnerJa:  d.mealDinnerJa,  mealDinnerEn:  d.mealDinnerEn,
       }));
-      const daysRes = await fetch(apiBase + `/plans/${planEditorId}/days`, {
+      const daysRes = await fetch(`${apiBase}/plans/${planEditorId}/days`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(daysPayload),
@@ -686,7 +688,7 @@ export default function AdminPage() {
         amountEn: b.amountEn, currencyEn: b.currencyEn,
         noteZh: b.noteZh, noteJa: b.noteJa, noteEn: b.noteEn,
       }));
-      const budgetRes = await fetch(apiBase + `/plans/${planEditorId}/budget`, {
+      const budgetRes = await fetch(`${apiBase}/plans/${planEditorId}/budget`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(budgetPayload),
@@ -757,7 +759,7 @@ export default function AdminPage() {
     if (!window.confirm(`未使用の画像 ${unused.length} 件を削除します。この操作は元に戻せません。`)) return;
     setBulkDeleting(true);
     try {
-      const results = await Promise.all(unused.map((f) => fetch(apiBase + `/media/${f.id}`, { method: 'DELETE' })));
+      const results = await Promise.all(unused.map((f) => fetch(`${apiBase}/media/${f.id}`, { method: 'DELETE' })));
       const deletedIds = unused.filter((_, i) => results[i].ok).map((f) => f.id);
       setFiles((prev) => prev.filter((f) => !deletedIds.includes(f.id)));
       showMessage('success', `${deletedIds.length} 件削除しました`);
@@ -771,7 +773,7 @@ export default function AdminPage() {
     if (!editingMetaFile) return;
     setMetaSaving(true);
     try {
-      const res = await fetch(apiBase + `/media/${editingMetaFile.id}`, {
+      const res = await fetch(`${apiBase}/media/${editingMetaFile.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: metaForm.name, category: metaForm.category }),
@@ -927,6 +929,16 @@ export default function AdminPage() {
 
       <div className="max-w-7xl mx-auto px-6 py-12">
         {/* ── Tabs ── */}
+        {/* サイト設定リンク */}
+        <div className="flex items-center justify-end mb-4">
+          <a
+            href={(process.env.NEXT_PUBLIC_BASE_PATH || '') + '/admin/site-settings'}
+            className="px-4 py-2 border border-white/10 text-white/40 hover:border-gold/40 hover:text-gold font-display text-[10px] uppercase tracking-[0.3em] transition-all duration-300"
+          >
+            ⚙ サイト設定
+          </a>
+        </div>
+
         <div className="flex overflow-x-auto border-b border-white/10 mb-8">
           {(['images', 'videos', 'plans', 'layout', 'contact', 'surroundings', 'seasons', 'announcements'] as Tab[]).map((tab) => (
             <button key={tab}
@@ -2345,7 +2357,7 @@ export default function AdminPage() {
           const handleVisibleToggle = async (spot: SurroundingSpot) => {
             const next = !spot.visible;
             setSurroundingSpots((prev) => prev.map((s) => s.id === spot.id ? { ...s, visible: next } : s));
-            await fetch(apiBase + `/surroundings/${spot.id}`, {
+            await fetch(`${apiBase}/surroundings/${spot.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ visible: next }),
@@ -2354,7 +2366,7 @@ export default function AdminPage() {
 
           const handleDelete = async (id: string) => {
             if (!confirm('このスポットを削除しますか？')) return;
-            await fetch(apiBase + `/surroundings/${id}`, { method: 'DELETE' });
+            await fetch(`${apiBase}/surroundings/${id}`, { method: 'DELETE' });
             setSurroundingSpots((prev) => prev.filter((s) => s.id !== id));
             if (surroundingEditId === id) setSurroundingEditId(null);
           };
@@ -2869,7 +2881,6 @@ export default function AdminPage() {
               fd.append('seasonId', String(spotId));
               const res = await fetch(`${apiBase}/seasons/upload`, { method: 'POST', body: fd });
               if (res.ok) {
-                // Refresh the spot to show new image
                 const updated = await fetch(`${apiBase}/seasons/${spotId}`).then((r) => r.json());
                 setSeasonSpots((prev) => prev.map((s) => s.id === spotId ? updated : s));
                 if (seasonForm.id === spotId) setSeasonForm(updated);
@@ -3292,7 +3303,7 @@ export default function AdminPage() {
           );
         })()}
 
-        {/* ===== ANNOUNCEMENTS TAB ===== */}
+        {/* ══════════════════ ANNOUNCEMENTS TAB ══════════════════ */}
         {activeTab === 'announcements' && (() => {
           const isNow = (a: AnnouncementItem) => {
             const now = new Date();
@@ -3392,14 +3403,11 @@ export default function AdminPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                            onClick={() => handleToggleActive(a)}
-                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-gold transition-colors"
-                          >
+                          <button onClick={() => handleToggleActive(a)}
+                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-gold transition-colors">
                             {a.isActive ? 'Disable' : 'Enable'}
                           </button>
-                          <button
-                            onClick={() => {
+                          <button onClick={() => {
                               setAnnouncementForm({
                                 messageCn: a.messageCn, messageJa: a.messageJa, messageEn: a.messageEn,
                                 startsAt: a.startsAt?.slice(0, 16) ?? '',
@@ -3408,14 +3416,11 @@ export default function AdminPage() {
                               });
                               setAnnouncementEditId(a.id);
                             }}
-                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-gold transition-colors"
-                          >
+                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-gold transition-colors">
                             Edit
                           </button>
-                          <button
-                            onClick={() => handleDelete(a.id)}
-                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-red-400 transition-colors"
-                          >
+                          <button onClick={() => handleDelete(a.id)}
+                            className="font-display text-[10px] uppercase tracking-widest px-3 py-1 border border-white/10 text-white/40 hover:text-red-400 transition-colors">
                             Delete
                           </button>
                         </div>
@@ -3425,7 +3430,6 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Form */}
               {announcementEditId !== null && (
                 <div className="border border-gold/20 p-6">
                   <h3 className="font-display text-sm uppercase tracking-widest text-gold mb-6">
@@ -3479,15 +3483,13 @@ export default function AdminPage() {
                       </div>
                       <div className="flex items-end pb-2">
                         <label className="flex items-center gap-2 cursor-pointer">
-                          <input type="checkbox" checked={af.isActive} onChange={(e) => setAf({ isActive: e.target.checked })}
-                            className="accent-gold" />
+                          <input type="checkbox" checked={af.isActive} onChange={(e) => setAf({ isActive: e.target.checked })} className="accent-gold" />
                           <span className="font-display text-[10px] uppercase tracking-widest text-white/60">Active</span>
                         </label>
                       </div>
                     </div>
                   </div>
 
-                  {/* Live Preview */}
                   <div className="mb-6">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="font-display text-[10px] uppercase tracking-widest text-white/30">Preview:</span>

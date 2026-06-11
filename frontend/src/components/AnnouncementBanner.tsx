@@ -25,7 +25,6 @@ export default function AnnouncementBanner() {
       .catch(() => {});
   }, [apiBase]);
 
-  // Sync CSS variable so Header can offset itself
   useEffect(() => {
     const h = data && !dismissed ? '38px' : '0px';
     document.documentElement.style.setProperty('--banner-h', h);
@@ -46,10 +45,7 @@ export default function AnnouncementBanner() {
 
   return (
     <div style={{ background: bg, height: 38, display: 'flex', alignItems: 'center', overflow: 'hidden', flexShrink: 0, position: 'fixed', top: 0, left: 0, right: 0, zIndex: 60 }}>
-      {/* Left accent */}
       <div style={{ flexShrink: 0, width: isImportant ? 8 : 3, height: '100%', background: '#c9a96e' }} />
-
-      {/* Scrolling text */}
       <div style={{ flex: 1, overflow: 'hidden', padding: '0 14px' }}>
         <div
           style={{
@@ -65,8 +61,6 @@ export default function AnnouncementBanner() {
           {message}
         </div>
       </div>
-
-      {/* Dismiss button */}
       <button
         onClick={() => setDismissed(true)}
         style={{ flexShrink: 0, color: '#c9a96e', fontSize: 16, padding: '0 14px', lineHeight: 1, background: 'none', border: 'none', cursor: 'pointer' }}
@@ -74,7 +68,6 @@ export default function AnnouncementBanner() {
       >
         ✕
       </button>
-
       <style>{`
         @keyframes banner-scroll {
           0%   { transform: translateX(0); }
