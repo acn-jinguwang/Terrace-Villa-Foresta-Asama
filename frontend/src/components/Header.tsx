@@ -12,6 +12,7 @@ const baseNavItems = [
   { key: 'library',      href: '/library',       label: 'Gallery' },
   { key: 'plans',        href: '/plans',         label: 'Plans' },
   { key: 'surroundings', href: '/surroundings',  label: 'Surroundings' },
+  { key: 'seasons',      href: '/seasons',       label: 'Seasons' },
 ];
 
 const languages: { code: Language; label: string }[] = [
