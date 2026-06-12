@@ -59,7 +59,7 @@ export default function Footer() {
               ].map((item) => (
                 <Link
                   key={item.key}
-                  href={item.href}
+                  href={item.href === '/' ? (base || '/') : base + item.href}
                   className="font-display text-xs tracking-[0.3em] uppercase text-white/40 hover:text-gold transition-colors duration-300"
                 >
                   {t(translations.nav[item.key as keyof typeof translations.nav])}
@@ -118,7 +118,7 @@ export default function Footer() {
             © 2025 Terrace Villa Foresta Asama. {t(translations.footer.rights)}.
           </p>
           <Link
-            href="/admin"
+            href={base + '/admin'}
             className="text-white/20 text-[10px] uppercase tracking-widest hover:text-gold/50 transition-colors duration-300"
           >
             {t(translations.nav.admin)}

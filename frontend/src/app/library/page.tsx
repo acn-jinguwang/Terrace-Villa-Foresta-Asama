@@ -149,7 +149,7 @@ export default function LibraryPage() {
               <p className="font-kaiti italic text-white/20 mb-4">
                 {lang === 'zh' ? '暂无图片' : lang === 'ja' ? '画像がありません' : 'No images yet'}
               </p>
-              <Link href="/admin" className="text-gold/40 hover:text-gold text-[10px] font-display uppercase tracking-widest transition-colors duration-300">
+              <Link href={base + '/admin'} className="text-gold/40 hover:text-gold text-[10px] font-display uppercase tracking-widest transition-colors duration-300">
                 {lang === 'zh' ? '前往管理画面上传' : lang === 'ja' ? '管理画面でアップロード' : 'Upload via Admin →'}
               </Link>
             </div>
