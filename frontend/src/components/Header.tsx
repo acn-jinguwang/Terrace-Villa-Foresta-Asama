@@ -24,9 +24,10 @@ const languages: { code: Language; label: string }[] = [
 export default function Header() {
   const { language, setLanguage } = useLanguage();
   const pathname = usePathname();
+  const base = pathname.startsWith('/test') ? '/test' : '';
   const navItems = baseNavItems.map((item) => ({
     ...item,
-    // basePath in next.config.js is prepended automatically by Next.js <Link>
+    href: item.href === '/' ? (base || '/') : base + item.href,
     label: language === 'zh' ? item.labelZh : language === 'ja' ? item.labelJa : item.labelEn,
   }));
   const [scrolled, setScrolled] = useState(false);
@@ -50,7 +51,7 @@ export default function Header() {
     >
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex flex-col">
+        <Link href={base || '/'} className="flex flex-col">
           <span className="font-display text-gold text-xs tracking-[0.5em] uppercase">
             Terrace Villa
           </span>
@@ -107,7 +108,7 @@ export default function Header() {
           </button>
 
           {/* Admin Link */}
-          <Link href="/admin/login"
+          <Link href={base + '/admin/login'}
             className="hidden md:block font-display text-[9px] tracking-[0.3em] uppercase text-white/15 hover:text-white/40 transition-colors duration-300">
             Admin
           </Link>
